@@ -1,0 +1,2 @@
+import type { APIRoute } from 'astro';
+export const GET: APIRoute=({site})=>new Response(`# 素Clash\n\nClash 客户端下载、安装教程与机场选购内容，简体中文。\n\n- [软件大全](${new URL('/software/',site)})\n- [下载中心](${new URL('/download/',site)})\n- [教程文章](${new URL('/articles/',site)})\n- [机场推荐](${new URL('/airports/',site)})\n- [站点地图](${new URL('/sitemap-index.xml',site)})\n`,{headers:{'Content-Type':'text/plain; charset=utf-8'}});

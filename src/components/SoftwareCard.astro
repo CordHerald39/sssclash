@@ -1,0 +1,12 @@
+---
+import type { Software } from '../lib/content';
+import Icon from './Icon.astro';
+interface Props { item: Software; compact?: boolean; defaultHidden?: boolean; }
+const { item, compact = false, defaultHidden = false } = Astro.props;
+---
+<a class:list={['software-card', { compact }]} href={`/software/${item.slug}/`} hidden={defaultHidden} data-filter-item data-platform={item.platforms.join(' ')} data-kind={item.kind} data-status={item.status}>
+  <span class="software-symbol" style={`--symbol-color:${item.color}`}>{item.symbol}</span>
+  <div class="card-content"><div class="card-title-line"><h3>{item.name}</h3>{item.status === 'legacy' && <span class="tag muted">历史版本</span>}</div>
+    <p>{item.description}</p><div class="tags">{item.platforms.map((p) => <span class:list={['tag', { blue: p === 'Windows' }]}>{p}</span>)}</div>
+  </div><span class="card-arrow"><Icon name="chevron" size={16} /></span>
+</a>

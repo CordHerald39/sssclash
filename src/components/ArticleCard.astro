@@ -1,0 +1,9 @@
+---
+import { imageFor, dateLabel, type Article } from '../lib/content';
+interface Props { item: Article; compact?: boolean; }
+const { item, compact = false } = Astro.props;
+---
+<a class:list={['article-card', { compact }]} href={`/articles/${item.slug}/`} data-filter-item data-category={item.category}>
+  <img src={imageFor(item.cover)} alt={`${item.title}配图`} width="600" height="400" loading="lazy" />
+  <div><span class:list={['tag', item.category === 'FAQ' ? 'blue' : item.category === '测评' ? 'green' : 'orange']}>{item.category}</span><h3>{item.title}</h3>{!compact && <p>{item.description}</p>}<time datetime={item.publishedAt}>{dateLabel(item.publishedAt)}</time></div>
+</a>

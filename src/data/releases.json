@@ -1,0 +1,42 @@
+{
+  "clash-verge-rev": {
+    "version": "v2.5.6",
+    "url": "https://github.com/clash-verge-rev/clash-verge-rev/releases/tag/v2.5.6",
+    "publishedAt": "2026-09-26T04:11:55Z"
+  },
+  "clash-nyanpasu": {
+    "version": "v1.6.1",
+    "url": "https://github.com/libnyanpasu/clash-nyanpasu/releases/tag/v1.6.1",
+    "publishedAt": "2024-09-07T16:48:05Z"
+  },
+  "clash-party": {
+    "version": "v2.0.3",
+    "url": "https://github.com/mihomo-party-org/clash-party/releases/tag/v2.0.3",
+    "publishedAt": "2026-09-20T13:56:08Z"
+  },
+  "flclash": {
+    "version": "v0.8.98",
+    "url": "https://github.com/chen08209/FlClash/releases/tag/v0.8.98",
+    "publishedAt": "2026-09-14T03:20:30Z"
+  },
+  "clash-meta-android": {
+    "version": "v2.11.35",
+    "url": "https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/v2.11.35",
+    "publishedAt": "2026-09-30T16:59:35Z"
+  },
+  "clashx-meta": {
+    "version": "v1.4.45",
+    "url": "https://github.com/MetaCubeX/ClashX.Meta/releases/tag/v1.4.45",
+    "publishedAt": "2026-09-14T14:23:24Z"
+  },
+  "pandora-box": {
+    "version": "v1.0.23",
+    "url": "https://github.com/snakem982/Pandora-Box/releases/tag/v1.0.23",
+    "publishedAt": "2026-08-22T07:46:56Z"
+  },
+  "mihomo": {
+    "version": "v1.19.32",
+    "url": "https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.32",
+    "publishedAt": "2026-09-30T17:09:36Z"
+  }
+}

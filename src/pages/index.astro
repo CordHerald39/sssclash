@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import PlatformFilters from '../components/PlatformFilters.astro';
+import SoftwareCard from '../components/SoftwareCard.astro';
+import AirportCard from '../components/AirportCard.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import { software, airports, articles, imageFor } from '../lib/content';
+const categories = [
+  { title: '机场推荐', description: '按需求找到合适的入口', href: '/airports/', image: 'airports' },
+  { title: '机场榜单', description: '集中查看与比较机场', href: '/ranking/', image: 'hero' },
+  { title: '便宜机场', description: '从预算和流量开始选', href: '/cheap/', image: 'routing' }
+];
+---
+<Layout title="Clash 客户端下载与机场选购指南" description="素Clash整理客户端官方下载入口、安装教程、FAQ与机场购买入口。按系统找软件，按预算了解机场，阅读实用配置和故障排查文章。">
+  <section class="hero"><div class="container hero-inner"><div class="hero-copy"><h1>找到适合你的<br />Clash 客户端</h1><p>官方直链下载，教程与机场选购指南</p><div class="hero-actions"><a class="button" href="/download/"><Icon name="download" />下载客户端</a><a class="button secondary" href="/airports/">浏览机场</a></div></div><img class="hero-art" src={imageFor('hero')} alt="电脑、客户端窗口与全球网络连接插画" width="1536" height="1024" loading="eager" fetchpriority="high" /></div></section>
+  <div class="container home-content">
+    <section data-filter-scope data-default-limit="3"><PlatformFilters /><div class="home-section"><div class="section-head"><h2>常用客户端</h2><a href="/software/">查看软件大全<Icon name="arrow" size={16} /></a></div><div class="grid three">{software.filter(s=>s.status==='current' && s.kind!=='core').map((item,i)=><SoftwareCard item={item} defaultHidden={i>2} />)}</div><p class="empty-state" hidden data-filter-empty>这个系统的相关工具请到 <a class="link-text" href="/download/">下载中心</a> 查看。</p></div></section>
+    <section class="home-section"><div class="section-head"><h2>机场选购指南</h2><a href="/articles/airport-plan-guide/">怎样选套餐<Icon name="arrow" size={16} /></a></div><p class="section-description">按预算、设备与使用频率，找到自己的选购方向。</p><div class="category-cards">{categories.map(c=><a class="category-card" href={c.href}><img src={imageFor(c.image)} alt={`${c.title}栏目插画`} width="176" height="148" loading="lazy" /><div><h3>{c.title}</h3><p>{c.description}</p></div><span class="circle-arrow"><Icon name="arrow" size={16} /></span></a>)}</div></section>
+    <section class="home-section"><div class="section-head"><h2>机场购买入口</h2><a href="/ranking/">查看全部<Icon name="arrow" size={16} /></a></div><div class="grid four">{airports.slice(0,8).map(item=><AirportCard item={item} compact />)}</div></section>
+    <section class="home-section"><div class="section-head"><h2>最新文章</h2><a href="/articles/">全部文章<Icon name="arrow" size={16} /></a></div><div class="grid three home-articles">{[articles[0],articles[1],articles[4]].map(item=><ArticleCard item={item} compact />)}</div></section>
+  </div>
+</Layout>

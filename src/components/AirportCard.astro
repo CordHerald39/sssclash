@@ -1,0 +1,11 @@
+---
+import type { Airport } from '../lib/content';
+import Icon from './Icon.astro';
+interface Props { item: Airport; compact?: boolean; }
+const { item, compact = false } = Astro.props;
+---
+<a class:list={['airport-card', { compact }]} href={`/airports/${item.slug}/`} data-filter-item data-name={`${item.name} ${item.domain}`}>
+  <span class="airport-symbol" style={`--symbol-color:${item.color}`}>{item.symbol}</span>
+  <div><h3>{item.name}</h3><p>{compact ? item.focus : item.description}</p>{!compact && <span class="domain">{item.domain}</span>}</div>
+  <span class="card-arrow"><Icon name="chevron" size={16} /></span>
+</a>

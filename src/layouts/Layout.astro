@@ -1,0 +1,65 @@
+---
+import '../styles/global.css';
+import { nav, ogKey } from '../lib/content';
+import Icon from '../components/Icon.astro';
+interface Props { title: string; description: string; noindex?: boolean; canonicalPath?: string; schema?: Record<string, unknown> | Record<string, unknown>[]; }
+const { title, description, noindex = false, canonicalPath, schema } = Astro.props;
+const site = Astro.site || new URL('https://sssclash.com');
+const path = Astro.url.pathname;
+const canonical = new URL(canonicalPath || path, site).href;
+const image = new URL(`/og/${ogKey(path)}.png`, site).href;
+const indexable = import.meta.env.SITE_INDEXABLE === 'true' && !noindex;
+const current = (href: string) => href === '/' ? path === '/' : path.startsWith(href);
+const serialize = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
+const baseSchema = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '素Clash', url: site.href, inLanguage: 'zh-CN' }, ...(schema ? (Array.isArray(schema) ? schema : [schema]) : [])];
+const ga = import.meta.env.PUBLIC_GA4_ID || '';
+---
+<!doctype html><html lang="zh-CN"><head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} | 素Clash</title><meta name="description" content={description} />
+  <meta name="robots" content={indexable ? 'index,follow' : 'noindex,follow'} /><link rel="canonical" href={canonical} />
+  <meta property="og:type" content={path.startsWith('/articles/') && path !== '/articles/' ? 'article' : 'website'} /><meta property="og:locale" content="zh_CN" />
+  <meta property="og:site_name" content="素Clash" /><meta property="og:title" content={title} /><meta property="og:description" content={description} /><meta property="og:url" content={canonical} /><meta property="og:image" content={image} /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content={title} /><meta name="twitter:description" content={description} /><meta name="twitter:image" content={image} />
+  <meta name="theme-color" content="#ffffff" /><link rel="icon" type="image/svg+xml" href="/favicon.svg" /><link rel="apple-touch-icon" href="/apple-touch-icon.png" /><link rel="manifest" href="/site.webmanifest" />
+  <link rel="alternate" type="application/rss+xml" title="素Clash文章" href="/rss.xml" />
+  {import.meta.env.PUBLIC_GOOGLE_VERIFICATION && <meta name="google-site-verification" content={import.meta.env.PUBLIC_GOOGLE_VERIFICATION} />}
+  {import.meta.env.PUBLIC_BING_VERIFICATION && <meta name="msvalidate.01" content={import.meta.env.PUBLIC_BING_VERIFICATION} />}
+  <script type="application/ld+json" set:html={serialize(baseSchema)} />
+  {ga && <script is:inline define:vars={{ ga }}>
+    const loadAnalytics=()=>{if(window.__analyticsLoaded)return;window.__analyticsLoaded=true;window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config',ga);const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(ga);document.head.appendChild(s)};
+    ['pointerdown','keydown','scroll'].forEach(event=>window.addEventListener(event,loadAnalytics,{once:true,passive:true}));setTimeout(loadAnalytics,6000);
+  </script>}
+</head><body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <header class="site-header"><div class="header-inner">
+    <a class="brand" href="/" aria-label="素Clash首页"><img src="/favicon.svg" width="30" height="30" alt="" /><span>素Clash</span></a>
+    <nav class="desktop-nav" aria-label="主导航">{nav.map((n) => <a href={n.href} class:list={{ active: current(n.href) }} aria-current={current(n.href) ? 'page' : undefined}>{n.text}</a>)}</nav>
+    <form class="header-search" action="/search/" role="search"><label class="sr-only" for="header-query">搜索软件、机场或文章</label><Icon name="search" size={16} /><input id="header-query" name="q" placeholder="搜索软件、机场或文章" type="search" /></form>
+    <details class="mobile-menu"><summary aria-label="展开网站导航"><Icon name="menu" size={24} /></summary><nav aria-label="手机导航">{nav.map((n) => <a href={n.href} aria-current={current(n.href) ? 'page' : undefined}>{n.text}</a>)}<a href="/search/">搜索</a></nav></details>
+  </div></header>
+  <main id="main"><slot /></main>
+  <footer class="site-footer"><div class="container footer-top"><div><a class="brand" href="/"><img src="/favicon.svg" width="25" height="25" alt="" /><span>素Clash</span></a><p>客户端下载、教程与机场选购，一站找到下一步。</p></div><div class="footer-links"><a href="/software/">软件大全</a><a href="/download/">下载中心</a><a href="/articles/">使用教程</a><a href="/airports/">机场推荐</a><a href="/about/">关于本站</a><a href="/sitemap-index.xml">站点地图</a><a href="/rss.xml">RSS</a></div></div><div class="container footer-bottom"><span>© {new Date().getFullYear()} 素Clash</span><span>{site.hostname}</span></div></footer>
+  <script>
+    document.querySelectorAll<HTMLElement>('[data-filter-scope]').forEach(scope => {
+      const filters = new Map<string, string>();
+      const apply = () => {
+        let count = 0;
+        const limit = [...filters.values()].every(v=>v==='all') ? Number(scope.dataset.defaultLimit || Infinity) : Infinity;
+        scope.querySelectorAll<HTMLElement>('[data-filter-item]').forEach(item => {
+          const visible = [...filters].every(([key,value]) => value === 'all' || (item.dataset[key] || '').split(' ').includes(value)) && count < limit;
+          item.hidden = !visible; if(visible) count++;
+        });
+        const empty = scope.querySelector<HTMLElement>('[data-filter-empty]'); if(empty) empty.hidden = count > 0;
+        const label = scope.querySelector<HTMLElement>('[data-filter-count]'); if(label) label.textContent = String(count);
+      };
+      const select = (button: HTMLButtonElement) => {
+        const key = button.dataset.filter!; filters.set(key, button.dataset.value || 'all');
+        scope.querySelectorAll<HTMLButtonElement>(`button[data-filter="${key}"]`).forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))}); apply();
+      };
+      scope.querySelectorAll<HTMLButtonElement>('button[data-filter]').forEach(button=>button.addEventListener('click',()=>select(button)));
+      const requested = new URLSearchParams(location.search).get('platform');
+      if(requested){const button=[...scope.querySelectorAll<HTMLButtonElement>('button[data-filter="platform"]')].find(b=>b.dataset.value===requested);if(button)select(button);}
+    });
+  </script>
+</body></html>

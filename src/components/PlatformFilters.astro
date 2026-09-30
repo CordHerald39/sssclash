@@ -1,0 +1,8 @@
+---
+import { platforms } from '../lib/content';
+import Icon from './Icon.astro';
+---
+<div class="filter-controls platform-filters" role="group" aria-label="按操作系统筛选">
+  <button type="button" class="active" data-filter="platform" data-value="all" aria-pressed="true"><Icon name="globe" size={17} />全部系统</button>
+  {platforms.map((p) => <button type="button" data-filter="platform" data-value={p} aria-pressed="false"><Icon name={p === 'Windows' ? 'windows' : p === 'Android' || p === 'iOS' ? 'phone' : 'monitor'} size={17} />{p}</button>)}
+</div>

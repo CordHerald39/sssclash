@@ -1,0 +1,21 @@
+[
+  {"slug":"yinghuamao","name":"樱花猫","domain":"yinghuamao.com.cn","symbol":"✿","color":"#ec4899","description":"从樱花猫购买入口查看当前套餐与订阅选项。选购前先核对计费周期、流量额度和自己需要使用的设备。","focus":"日常选购","plans":[]},
+  {"slug":"lingdianyun","name":"零点云","domain":"lingdianyun.com.cn","symbol":"☁","color":"#3b82f6","description":"整理零点云购买入口和套餐选购方法。先比较短期套餐，再确认续费规则与订阅导入方式。","focus":"套餐比较","plans":[]},
+  {"slug":"gwshudong","name":"GW树洞","domain":"gwshudong.com.cn","symbol":"♧","color":"#16a34a","description":"通过 GW树洞入口了解当前可购买的服务。按自己的月流量需求检查套餐，购买后使用适配设备的客户端导入订阅。","focus":"流量需求","plans":[]},
+  {"slug":"kkningmeng","name":"快柠檬","domain":"kkningmeng.com.cn","symbol":"◒","color":"#eab308","description":"收录快柠檬购买入口。比较套餐时同时看流量、有效期和在线设备条件，避免只根据单个价格选择。","focus":"预算选择","plans":[]},
+  {"slug":"zhyyjc","name":"一元机场","domain":"zhyyjc.com.cn","symbol":"¥","color":"#f59e0b","description":"从一元机场入口查看实际销售套餐。名称不等于当前售价，选择时按结算金额和可用流量比较。","focus":"入门预算","plans":[]},
+  {"slug":"kuailiangwfby","name":"快连","domain":"kuailiangwfby.com.cn","symbol":"↗","color":"#2563eb","description":"提供快连购买入口与订阅使用方向。选择服务时先确认自己的设备与客户端格式，再核对当前套餐权益。","focus":"设备匹配","plans":[]},
+  {"slug":"yinghuayun","name":"樱花云","domain":"yinghuayun.com.cn","symbol":"❀","color":"#db2777","description":"收录樱花云套餐购买入口。按短期费用、流量和有效期逐项比较，已有账号可直接从入口查看订单与订阅。","focus":"日常选购","plans":[]},
+  {"slug":"feiniaoyun","name":"飞鸟云","domain":"feiniaoyungw.com.cn","symbol":"⌁","color":"#0ea5e9","description":"从飞鸟云入口查看购买与订阅服务。电脑和手机使用时分别确认对应客户端的订阅格式和设备条件。","focus":"多端使用","plans":[]},
+  {"slug":"xiaohuojian","name":"小火箭","domain":"hcxiaohuojian.com.cn","symbol":"↑","color":"#f97316","description":"这是名单中的小火箭服务购买入口。机场套餐和手机上的 Shadowrocket 软件属于不同购买项目，选购时分别确认。","focus":"软件与服务","plans":[]},
+  {"slug":"hongxingyun","name":"红杏云","domain":"hongxingyuncn.com.cn","symbol":"●","color":"#ef4444","description":"收录红杏云购买入口。轻度浏览、视频和多设备使用的流量需求不同，先估算自己的用量再选择周期。","focus":"流量需求","plans":[]},
+  {"slug":"qingyunti","name":"青云梯","domain":"qingyunti.com.cn","symbol":"≋","color":"#06b6d4","description":"通过青云梯入口查看当前套餐。比较月付与长期方案时，检查总付款金额、流量重置和续费安排。","focus":"周期比较","plans":[]},
+  {"slug":"naiyun","name":"奈云","domain":"nnaiyun.com.cn","symbol":"N","color":"#8b5cf6","description":"整理奈云购买入口和新手选购方向。第一次使用可以先了解短期方案，确认设备上的客户端支持所提供订阅。","focus":"新手入门","plans":[]},
+  {"slug":"yifen","name":"一分机场","domain":"1fenjichang.com.cn","symbol":"¥","color":"#22c55e","description":"从一分机场入口查看正在销售的套餐。先核对当前结算价格，再比较流量单位、有效期与使用条件。","focus":"入门预算","plans":[]},
+  {"slug":"dogdog","name":"狗狗加速","domain":"dogdogjiasu.com.cn","symbol":"D","color":"#f59e0b","description":"提供狗狗加速购买入口。关注自己实际需要的设备数量和月流量，购买后妥善保管订阅链接。","focus":"设备匹配","plans":[]},
+  {"slug":"shandian","name":"闪电加速器","domain":"shandianjsq.com.cn","symbol":"ϟ","color":"#eab308","description":"收录闪电加速器购买入口。选购前确认服务提供的连接方式，以及能否使用你已安装的客户端。","focus":"连接方式","plans":[]},
+  {"slug":"keleyun","name":"可乐云","domain":"keleyun.com.cn","symbol":"K","color":"#ef4444","description":"从可乐云入口了解当前方案。比较流量包和周期套餐时，尤其注意有效期与到期后的续费方式。","focus":"计费方式","plans":[]},
+  {"slug":"xsus","name":"XSUS","domain":"xsuscn.com.cn","symbol":"X","color":"#6366f1","description":"整理 XSUS 购买入口。按设备、使用频率和预算选择方案，付款前核对套餐详情与订阅使用说明。","focus":"套餐比较","plans":[]},
+  {"slug":"wgetcloud","name":"WgetCloud","domain":"wgetcloud1.com.cn","symbol":"W","color":"#2563eb","description":"提供 WgetCloud 购买入口。个人套餐包含不同等级与周期，选购时核对本次订单对应的流量、连接数和费用。","focus":"周期比较","plans":[]},
+  {"slug":"shandiancat","name":"闪电猫","domain":"shandiancat.com.cn","symbol":"ϟ","color":"#f59e0b","description":"通过闪电猫入口查看当前销售方案。先确认客户端适配，再按自己的流量与付款周期选择套餐。","focus":"新手入门","plans":[]}
+]

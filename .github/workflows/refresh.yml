@@ -1,0 +1,48 @@
+name: Refresh content
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: refresh-content
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm refresh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: pnpm refresh:articles
+        env:
+          AI_AUTO_UPDATE: ${{ vars.AI_AUTO_UPDATE }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          GROK_MODEL: ${{ vars.GROK_MODEL }}
+          GROK_API_BASE: ${{ vars.GROK_API_BASE }}
+      - run: pnpm build
+        env:
+          SITE_INDEXABLE: 'true'
+      - name: Commit validated changes and deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- src/data/releases.json src/data/generated-articles.json; then
+            echo "No content changes"
+            exit 0
+          fi
+          git config user.name "sssclash-bot"
+          git config user.email "sssclash-bot@users.noreply.github.com"
+          git add src/data/releases.json src/data/generated-articles.json
+          git commit -m "Refresh software releases and validated content"
+          git push
+          gh workflow run pages.yml --ref main

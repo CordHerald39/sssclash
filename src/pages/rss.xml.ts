@@ -1,0 +1,4 @@
+import type { APIRoute } from 'astro';
+import { articles } from '../lib/content';
+const xml = (s:string) => s.replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]!));
+export const GET: APIRoute = ({site}) => new Response(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>素Clash教程与文章</title><link>${site!.href}</link><description>客户端下载、订阅、分流与机场选购指南</description><language>zh-CN</language>${articles.map(a=>`<item><title>${xml(a.title)}</title><link>${new URL(`/articles/${a.slug}/`,site).href}</link><guid>${new URL(`/articles/${a.slug}/`,site).href}</guid><description>${xml(a.description)}</description><pubDate>${new Date(a.publishedAt).toUTCString()}</pubDate></item>`).join('')}</channel></rss>`,{headers:{'Content-Type':'application/rss+xml; charset=utf-8'}});
