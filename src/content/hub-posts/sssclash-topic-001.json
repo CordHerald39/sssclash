@@ -1,0 +1,63 @@
+{
+  "title": "Clash DNS 配置中的 nameserver 和 fallback 怎么区分",
+  "description": "Clash DNS 配置中的 nameserver 和 fallback 怎么区分。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-001",
+  "category": "配置教程",
+  "tags": [
+    "Clash DNS 配置",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-01",
+  "updatedAt": "2026-10-01",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "nameserver 和 fallback 各自管什么",
+      "paragraphs": [
+        "Clash（mihomo）的 DNS 段里，nameserver 是默认的域名解析服务器，fallback 是后备域名解析服务器。文档把 fallback 写成一般情况下使用境外 DNS、用来保证结果可信的一组地址。两者不是“主服务器宕机再切备用”的轮询关系：未命中 nameserver-policy 时走 nameserver；一旦同时写了 fallback，就会对 nameserver 与 fallback 做并发查询，再交给 fallback-filter 决定最终采用哪边的结果。",
+        "只要配置了 fallback，就会默认启用 fallback-filter，且 geoip-code 默认为 CN。nameserver-policy 用来指定某些域名该问哪组服务器，键支持域名通配，值可以是字符串或数组，也可使用 geosite；它优先于 nameserver 和 fallback。区分两者之前，先确认当前域名有没有被 policy 截走，否则后面的并发和过滤根本不会发生。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "并发之后 fallback-filter 怎么选结果",
+      "paragraphs": [
+        "geoip 为 true 时，按 geoip-code（默认 CN）判断国家。该国家对应的 IP 结果直接采用；其他国家的 IP 结果视为污染，改用 fallback。ipcidr 列出的网段同样视为污染：nameserver 解析出这些地址时，最终改用 fallback 的结果。domain 列出的域名视为已污染，匹配后直接使用 fallback 解析，不去使用 nameserver。",
+        "fallback-filter 里的 geosite 字段已废弃，同类需求应改到 nameserver-policy。fallback-lazy-query 默认为 false；设为 true 时，会先看 nameserver 的结果是否满足 filter，再决定要不要发起 fallback 查询。",
+        "适用条件：需要一组默认可达的 DNS，同时又要把可疑结果换成境外可信结果时，才同时配置 nameserver 与 fallback。全部域名固定走同一组服务器时，只配 nameserver，不会进入并发和过滤。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "在解析流程里它们出现在哪一步",
+      "paragraphs": [
+        "需要解析域名时，先匹配 nameserver-policy。命中则用 policy 指定的服务器拿到 IP。未命中才使用 nameserver；此时若配置了 fallback，则两组并发，经过 filter 后得到 IP；未配置 fallback 则直接采用 nameserver 的结果。",
+        "direct-nameserver 只服务于直连出口的域名解析，不填则仍遵循 nameserver-policy、nameserver 和 fallback。proxy-server-nameserver 仅用于解析代理节点自己的域名，不填同样回落上述逻辑。direct-nameserver-follow-policy 默认不遵守 nameserver-policy，且仅在 direct-nameserver 非空时生效。业务域名走 nameserver 还是 fallback，和节点域名、直连域名是三条线，不能把节点连不上直接判成 fallback 写错。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "检查步骤与失败后的下一步",
+      "paragraphs": [
+        "适用前提：dns.enable 为 true。enhanced-mode 为 fake-ip 或 redir-host 都不改变 nameserver 与 fallback 的分工；fake-ip-filter 只决定是否下发假 IP，不要和 fallback-filter 混看。",
+        "检查顺序：打开配置，核对 nameserver、fallback、nameserver-policy、fallback-filter 四段。把出问题的域名对照 policy 的键，命中则本次不会进入 nameserver/fallback。再看 filter 的 geoip、geoip-code、ipcidr、domain 是否会否决 nameserver 结果，或强制只走 fallback。接着确认 default-nameserver 必须是 IP（可为加密 DNS），否则 DoH 主机名解析失败，两组都会表现为无响应。若 DNS 查询需要经过代理，应配置 proxy-server-nameserver；respect-rules 为 true 时，DNS 连接会遵守路由规则，更依赖这组节点 DNS。",
+        "失败后的调整：国内站点拿到境外地址，检查 geoip 是否把非目标国家结果判为污染，或 nameserver 本身返回了境外 IP。污染域名仍得到国内结果，把该域名写入 domain，或用 nameserver-policy 直接指定境外服务器。节点连不上先改 proxy-server-nameserver；直连异常再改 direct-nameserver。收窄误伤的 policy 键或 ipcidr 后，用同一域名再查，确认是 policy 命中、nameserver 直出，还是并发后被 filter 换成了 fallback。",
+        "https://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/config/dns/diagram/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}
