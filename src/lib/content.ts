@@ -50,7 +50,9 @@ const softwareGuides: Article[] = software.map((s) => ({
     ...s.faqs.map((faq) => ({ heading: faq.q, paragraphs: [faq.a] }))
   ]
 }));
-export const articles: Article[] = [...articleData as Article[], ...softwareGuides, ...generatedData as Article[]];
+const hubFiles = import.meta.glob('../content/hub-posts/*.json', { eager: true, import: 'default' });
+const hubArticles = Object.values(hubFiles) as Article[];
+export const articles: Article[] = [...articleData as Article[], ...softwareGuides, ...generatedData as Article[], ...hubArticles];
 export const tags = [...new Set(articles.flatMap((a) => a.tags))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
 export const platforms = ['Windows', 'macOS', 'Linux', 'Android', 'iOS'];
 export const nav = [
