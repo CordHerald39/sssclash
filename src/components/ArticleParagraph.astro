@@ -1,0 +1,6 @@
+---
+const { text } = Astro.props as { text: string };
+const urls = text.trim().split(/\s+/);
+const isSources = urls.length > 0 && urls.every(url => /^https:\/\/[^\s<>"']+$/.test(url));
+---
+{isSources ? <div class="article-links" aria-label="参考资料">{urls.map(url => <a class="link-text" href={url} target="_blank" rel="noopener noreferrer">{url}</a>)}</div> : <p>{text}</p>}
