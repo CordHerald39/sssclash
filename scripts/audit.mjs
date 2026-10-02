@@ -6,11 +6,11 @@ const walk=async(dir)=>{const output=[];for(const entry of await readdir(dir,{wi
 const files=await walk(root);const html=files.filter(f=>f.endsWith('.html'));const issues=[];const titles=new Map();const canonicalUrls=new Set();const counts={pages:html.length,images:0,links:0,schemas:0};
 const exists=async p=>{try{return (await stat(p)).isFile()}catch{return false}};
 const resolveTarget=async pathname=>{let target=path.join(root,decodeURIComponent(pathname));if(!target.startsWith(root+path.sep)&&target!==root)return null; if(await exists(target))return target;if(await exists(path.join(target,'index.html')))return path.join(target,'index.html');if(await exists(target+'.html'))return target+'.html';return null;};
-for(const file of html){const relative=path.relative(root,file).split(path.sep).join('/');const pageUrl=new URL('/'+relative.replace(/index\.html$/,''),'https://sssclash.com');const $=load(await readFile(file,'utf8'));const fail=text=>issues.push(`${relative}: ${text}`);
+for(const file of html){const relative=path.relative(root,file).split(path.sep).join('/');const pageUrl=new URL('/'+relative.replace(/index\.html$/,''),'https://sssclash.com.cn');const $=load(await readFile(file,'utf8'));const fail=text=>issues.push(`${relative}: ${text}`);
   if($('h1').length!==1)fail(`H1 count ${$('h1').length}`);
   const title=$('title').text();if(!title)fail('Missing title');if(titles.has(title))fail(`Duplicate title with ${titles.get(title)}`);titles.set(title,relative);
   if(!$('meta[name="description"]').attr('content'))fail('Missing description');
-  const canonical=$('link[rel="canonical"]').attr('href');if(!canonical||new URL(canonical).hostname!=='sssclash.com')fail('Invalid canonical');else canonicalUrls.add(canonical);
+  const canonical=$('link[rel="canonical"]').attr('href');if(!canonical||new URL(canonical).hostname!=='sssclash.com.cn')fail('Invalid canonical');else canonicalUrls.add(canonical);
   if(!$('meta[name="robots"]').attr('content'))fail('Missing robots');
   if($('html').attr('lang')!=='zh-CN')fail('Incorrect language');
   for(const node of $('script[type="application/ld+json"]').toArray()){try{JSON.parse($(node).text());counts.schemas++}catch{fail('Invalid JSON-LD')}}

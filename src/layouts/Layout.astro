@@ -4,7 +4,7 @@ import { nav, ogKey } from '../lib/content';
 import Icon from '../components/Icon.astro';
 interface Props { title: string; description: string; noindex?: boolean; canonicalPath?: string; schema?: Record<string, unknown> | Record<string, unknown>[]; }
 const { title, description, noindex = false, canonicalPath, schema } = Astro.props;
-const site = Astro.site || new URL('https://sssclash.com');
+const site = Astro.site || new URL('https://sssclash.com.cn');
 const path = Astro.url.pathname;
 const canonical = new URL(canonicalPath || path, site).href;
 const image = new URL(`/og/${ogKey(path)}.png`, site).href;

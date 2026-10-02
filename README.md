@@ -1,4 +1,4 @@
-# 素Clash · sssclash.com
+# 素Clash · sssclash.com.cn
 
 Astro 静态网站，简体中文。实现采用用户通过的黑白主色、蓝色交互和自然彩色配图。设计与 Grok 原始响应保留在本地 `design/`，不推送到仓库。代码现由 Codex 编写。
 
@@ -33,7 +33,7 @@ pnpm preview
 
 1. 将项目推送到自己的 GitHub 仓库 `main` 分支。
 2. 仓库 Settings → Pages → Source 选择 GitHub Actions。
-3. 设置自定义域名 `sssclash.com`，按 GitHub 指引配置 DNS 与 HTTPS。
+3. 设置自定义域名 `sssclash.com.cn`，按 GitHub 指引配置 DNS 与 HTTPS。
 4. `pages.yml` 在 main 更新或手动触发时构建、检查并部署。
 
 `public/CNAME` 已配置域名；没有项目子路径 `base`。本地默认 `SITE_INDEXABLE=false`；部署流程设为 `true`。搜索页和404始终 noindex。

@@ -9,7 +9,7 @@
   {"slug":"feiniaoyun","name":"飞鸟云","domain":"feiniaoyungw.com.cn","symbol":"⌁","color":"#0ea5e9","description":"从飞鸟云入口查看购买与订阅服务。电脑和手机使用时分别确认对应客户端的订阅格式和设备条件。","focus":"多端使用","plans":[]},
   {"slug":"xiaohuojian","name":"小火箭","domain":"hcxiaohuojian.com.cn","symbol":"↑","color":"#f97316","description":"这是名单中的小火箭服务购买入口。机场套餐和手机上的 Shadowrocket 软件属于不同购买项目，选购时分别确认。","focus":"软件与服务","plans":[]},
   {"slug":"hongxingyun","name":"红杏云","domain":"hongxingyuncn.com.cn","symbol":"●","color":"#ef4444","description":"收录红杏云购买入口。轻度浏览、视频和多设备使用的流量需求不同，先估算自己的用量再选择周期。","focus":"流量需求","plans":[]},
-  {"slug":"qingyunti","name":"青云梯","domain":"qingyunti.com.cn","symbol":"≋","color":"#06b6d4","description":"通过青云梯入口查看当前套餐。比较月付与长期方案时，检查总付款金额、流量重置和续费安排。","focus":"周期比较","plans":[]},
+  {"slug":"qingyunti","name":"青云梯","domain":"qingyunti1.com.cn","symbol":"≋","color":"#06b6d4","description":"通过青云梯入口查看当前套餐。比较月付与长期方案时，检查总付款金额、流量重置和续费安排。","focus":"周期比较","plans":[]},
   {"slug":"naiyun","name":"奈云","domain":"nnaiyun.com.cn","symbol":"N","color":"#8b5cf6","description":"整理奈云购买入口和新手选购方向。第一次使用可以先了解短期方案，确认设备上的客户端支持所提供订阅。","focus":"新手入门","plans":[]},
   {"slug":"yifen","name":"一分机场","domain":"1fenjichang.com.cn","symbol":"¥","color":"#22c55e","description":"从一分机场入口查看正在销售的套餐。先核对当前结算价格，再比较流量单位、有效期与使用条件。","focus":"入门预算","plans":[]},
   {"slug":"dogdog","name":"狗狗加速","domain":"dogdogjiasu.com.cn","symbol":"D","color":"#f59e0b","description":"提供狗狗加速购买入口。关注自己实际需要的设备数量和月流量，购买后妥善保管订阅链接。","focus":"设备匹配","plans":[]},

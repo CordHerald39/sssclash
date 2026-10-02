@@ -23,7 +23,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
         env:
-          SITE_URL: https://sssclash.com
+          SITE_URL: https://sssclash.com.cn
           SITE_INDEXABLE: 'true'
           PUBLIC_GA4_ID: ${{ vars.PUBLIC_GA4_ID }}
           PUBLIC_GOOGLE_VERIFICATION: ${{ vars.PUBLIC_GOOGLE_VERIFICATION }}
