@@ -1,0 +1,72 @@
+{
+  "slug": "github-release-sha256-file-check",
+  "title": "GitHub 客户端安装包 SHA256 怎么核对：先匹配版本和文件名",
+  "description": "用官方Release资产或校验文件作比较对象，计算本地SHA256，并区分一致性校验与软件安全保证。",
+  "tags": [
+    "GitHub Releases",
+    "SHA256",
+    "下载校验"
+  ],
+  "software": [],
+  "cover": "tutorial",
+  "sections": [
+    {
+      "heading": "校验前先找对比较对象",
+      "paragraphs": [
+        "SHA256 需要比较本地文件和发布方提供的期望值。首先确认原始项目仓库、Release标签、系统平台、架构与资产文件名完全对应。对比另一个版本或另一个系统的哈希，得到不一致不能直接证明下载被篡改。",
+        "2026年10月4日核验的 GitHub Release资产 API文档包含 digest 字段，形式可以是 sha256 加哈希值。项目也可能提供校验清单或签名，具体以该发布页为准。不是每个历史资产都一定具有可用 digest；找不到期望值时，应明确说明缺少比较依据。"
+      ]
+    },
+    {
+      "heading": "Windows 在本地计算文件哈希",
+      "paragraphs": [
+        "PowerShell 的 Get-FileHash 可以计算文件内容的哈希；微软文档说明默认算法为 SHA256。显式指定算法能减少误会。使用 -LiteralPath 指向你刚下载的确切文件，不要用包含多个包的模糊通配路径。",
+        "命令形状为 Get-FileHash -LiteralPath '实际下载文件的完整路径' -Algorithm SHA256。把引号里的内容替换成真实路径后在本地执行；这里不提供虚构文件名或虚构期望哈希。输出里的 Hash 才是需要比较的值，Path 用于确认没有算错文件。"
+      ]
+    },
+    {
+      "heading": "有 digest 时怎样比较",
+      "paragraphs": [
+        "若官方资产记录明确提供 sha256: 前缀的 digest，先确认记录的 name 和你下载的文件名相符，再取冒号后的哈希与本地 SHA256比较。大小写不影响十六进制数值，漏掉字符或多复制字符会造成假差异。",
+        "不要计算解压后的某个可执行文件，再与压缩包的 digest 比较；也不要在解包、修改或重新压缩之后计算原包哈希。保留原始下载文件，先完成校验，再决定安装。"
+      ]
+    },
+    {
+      "heading": "结果不一致与没有哈希分别处理",
+      "paragraphs": [
+        "不一致时暂停使用该文件，重新核对版本、平台、文件名和下载是否完整。通过原发布页重新下载后再比较，并保留错误信息。如果仍不一致，向原项目报告标签、资产名与计算方法，不发送私人目录里的其他文件。",
+        "若项目没有可核对值，只能记录“未完成哈希比对”，不能声称验证通过。哈希一致说明与比较对象的字节内容一致，并不独立证明发布方身份可信、软件没有漏洞或适合你的系统；来源、签名和平台要求仍需单独核对。"
+      ],
+      "links": [
+        {
+          "text": "按平台选择官方软件入口",
+          "href": "/download/"
+        },
+        {
+          "text": "Windows 客户端安装基础",
+          "href": "/articles/clash-getting-started/"
+        }
+      ]
+    },
+    {
+      "heading": "一手来源",
+      "paragraphs": [
+        "来源核验：2026-10-04。文中命令来自微软工具能力，资产字段来自 GitHub 文档；没有执行任何客户端下载或安装。"
+      ],
+      "links": [
+        {
+          "text": "微软 Get-FileHash 文档",
+          "href": "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/get-filehash?view=powershell-7.5"
+        },
+        {
+          "text": "GitHub Release assets API",
+          "href": "https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28"
+        }
+      ]
+    }
+  ],
+  "category": "实用教程",
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "airports": []
+}
