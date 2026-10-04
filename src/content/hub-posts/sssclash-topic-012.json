@@ -1,0 +1,64 @@
+{
+  "title": "Clash external-controller 和 secret 怎么配置才合适",
+  "description": "Clash external-controller 和 secret 怎么配置才合适。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-012",
+  "category": "配置教程",
+  "tags": [
+    "Clash external-controller",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "external-controller 决定 RESTful API 听在哪个地址和端口，secret 是访问该 API 的密钥。二者是否“合适”，取决于谁被允许改内核状态：只本机面板、还是局域网甚至公网都能调用。资料同时列出若干不校验 secret 的入口，只改监听地址或只填密钥都不够，必须按实际打开的控制器类型一起收口。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "监听地址、密钥与旁路入口如何配合",
+      "paragraphs": [
+        "基本写法如下：",
+        "```\nexternal-controller: 127.0.0.1:9090\nsecret: \"\"\n```",
+        "127.0.0.1 表示本机回环。文档说明可以把 127.0.0.1 改成 0.0.0.0 来监听所有 IP。secret 为空即未设置访问密钥。只在本机使用控制面时，应保持回环监听，并把 secret 设成非空字符串。需要给其他设备上的面板使用时，监听范围会扩大，此时更不应留下空密钥。",
+        "与控制面相关的项还包括：external-controller-cors（allow-origins、allow-private-network）；external-controller-unix（Unix socket）；external-controller-pipe（Windows named pipe）；external-controller-tls（HTTPS API）；external-controller-routing-mark（Linux 上给监听 socket 设 routing-mark）；external-doh-server（在 RESTful API 端口上开 DOH）。",
+        "文档对安全边界写得很硬：从 Unix socket 或 Windows named pipe 访问 API 不会验证 secret；external-doh-server 对应的 URL 也不会验证 secret。这些开关一旦打开，secret 挡不住对应通道，需要靠文件系统权限、管道 ACL 或网络不可达来约束。",
+        "启用 HTTPS-API 时，必须配置 tls 里的证书与私钥，并且使用 TLS 也必须填写 external-controller。证书与私钥可以是 PEM 文本或路径；资料注明自 v1.19.18 起，当它们指向本地文件时支持自动重载。external-ui 把静态网页挂在 API 的 /ui 路径，面板流量最终仍打到同一套控制器。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按使用场景检查是否合适",
+      "paragraphs": [
+        "1. 读 external-controller 的主机部分。仍是 127.0.0.1，表示其他网卡上的设备不应直接连上；写成 0.0.0.0 则所有接口都在听。\n2. 读 secret。空字符串时，凡是能连上监听地址的客户端都可以调 API，不适合暴露到局域网或公网。\n3. 列出是否启用 unix、pipe、external-doh-server。任一启用，就把该通道视为无密钥入口，检查权限与可达范围，而不是以为填了 secret 就全部受保护。\n4. 若配置了 external-controller-tls，确认 tls.certificate、tls.private-key 已给，且明文控制器地址仍然存在。\n5. 浏览器面板跨域失败或过宽时，核对 CORS 的 allow-origins 是否把来源放行到超出预期的站点。\n6. external-ui 路径若不在工作目录，文档要求通过 SAFE_PATHS 环境变量加入安全路径，语法与操作系统 PATH 相同（Windows 分号，其他系统冒号）。",
+        "判断依据：非本机主机能访问控制器端口，同时 secret 为空，或 unix、pipe、DOH 对不可信调用方可达，属于控制面过大。仅回环监听、secret 非空、且未打开无校验通道，才符合“只管理本机内核”这一常见目标。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "连不上或密钥行为异常时的下一步",
+      "paragraphs": [
+        "客户端连错主机是第一类失败：其他设备去连 127.0.0.1 不会打到你这台机器的 API。应改监听地址并补上非空 secret，或让调用方走已受控的转发，而不是先把密钥留空来“方便调试”。",
+        "提示密钥不正确：核对调用是否按 API 要求携带 secret，以及 CORS 是否拒绝了面板页面的 Origin。origins 写成过宽会放大风险，写成过窄则表现为面板打不开接口。",
+        "unix 或 named pipe 能改策略组、HTTP 口却要密钥：这是文档写明的行为。不能接受旁路就关闭 unix、pipe 与 external-doh-server，不要反复更换 secret 字符串。",
+        "HTTPS 失败：检查证书、私钥、external-controller-tls 的地址端口，以及是否漏写 external-controller。Linux 上控制器流量走了意外路由时，再看 external-controller-routing-mark 是否与策略路由冲突。",
+        "https://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

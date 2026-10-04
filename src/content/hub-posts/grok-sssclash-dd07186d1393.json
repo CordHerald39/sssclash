@@ -1,0 +1,63 @@
+{
+  "title": "Clash Meta 手机端（Android）：开了私人 DNS 时，TUN 的 dns-hijack 为什么劫持不到",
+  "description": "Clash Meta 手机端（Android）：开了私人 DNS 时，TUN 的 dns-hijack 为什么劫持不到。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-dd07186d1393",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta Android 私人DNS TUN dns-hijack 失效",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Android 上开了系统「私人 DNS」之后，TUN 的 `dns-hijack` 经常表现为规则在、查询却进不了内核。这不是把 `any:53` 写错那么简单：内核文档直接写明，Android 开启私人 DNS 后无法自动劫持 DNS 请求。下面只针对手机 TUN 场景，按系统开关、劫持写法、严格路由和内部 DNS 的顺序排查。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "私人 DNS 为什么让劫持失效",
+      "paragraphs": [
+        "`dns-hijack` 的作用是把匹配到的连接导入内部 DNS 模块。未写协议时默认按 UDP，即 `udp://`。常见写法是同时覆盖 UDP 与 TCP：",
+        "```yaml\ntun:\n  enable: true\n  auto-route: true\n  dns-hijack:\n    - any:53\n    - tcp://any:53\n```",
+        "`any:53` 匹配任意地址的 53 端口（默认 UDP），`tcp://any:53` 补上 TCP DNS。两者都只是把已经出现在 TUN 路径上的 53 端口连接送进内部模块。",
+        "Android 私人 DNS 使用系统级加密解析，查询不会以传统明文 53 端口的形式交给 TUN。文档因此给出平台限制：在 Android 如开启私人 DNS，则无法自动劫持 DNS 请求。判断依据是：劫持列表写得再全，只要系统私人 DNS 仍开着，内核也接不住这些查询。把 `any:53` 改成更长的列表，改变不了这一层。",
+        "同页还注明：MacOS / Windows 无法自动劫持发往局域网的 DNS。那是桌面平台的另一条限制，不要和 Android 私人 DNS 混为一谈。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "strict-route 在什么条件下补上劫持",
+      "paragraphs": [
+        "仅写 `dns-hijack` 不够时，需要看 `auto-route` 与 `strict-route`。`strict-route` 在启用 `auto-route` 时执行更严格的路由。",
+        "文档对 Linux 的说明包括：让不支持的网络无法到达、将所有连接路由到 TUN，并写明它可以防止地址泄漏，**并使 DNS 劫持在 Android 上工作**。因此在 Android 上若私人 DNS 已关闭、劫持列表也写了，仍有查询漏出，下一步应确认 `auto-route` 与 `strict-route` 是否同时为 true，而不是继续追加无关端口。",
+        "判断依据：私人 DNS 关闭之后，53 端口流量仍绕开 TUN，才轮到检查严格路由；私人 DNS 还开着时，打开 `strict-route` 也不能把系统加密 DNS 变成可劫持的 53 端口。另外，`strict-route` 在 Windows 上的含义是加防火墙规则、抑制多宿主 DNS 泄漏，并可能影响部分虚拟机软件。那是桌面行为，不能拿来解释手机私人 DNS。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "建议排查顺序",
+      "paragraphs": [
+        "只针对 Android 手机、TUN 已打开的场景，按下面做，每一步都有明确通过条件。",
+        "1. 先关系统私人 DNS。打开系统网络设置，把私人 DNS 设为关闭。通过条件：系统不再对私人 DNS 服务器做加密解析。这一步不做，后面改 YAML 没有意义。\n2. 确认内部 DNS 已启用。配置里 `dns.enable` 必须为 true。为 false 时使用系统 DNS，劫持进来也没有内部模块可处理。文档把劫持目标说成“内部 dns 模块”，没有该模块时 `dns-hijack` 只是空接。\n3. 核对 TUN 劫持列表。至少包含 `any:53`；若应用使用 TCP DNS，加上 `tcp://any:53`。未写协议不要理解成所有协议，文档默认只有 UDP。\n4. 核对路由开关。`tun.enable`、`auto-route` 为 true；需要让劫持在 Android 上成立时打开 `strict-route`。\n5. 确认查询确实进入了 TUN。若该应用或用户未被路由进虚拟网卡，劫持规则不会生效。此时应先看 TUN 是否在收包，而不是改劫持语法。",
+        "仍失败时的判断可以收成三条：私人 DNS 开着，属于文档写明的无法自动劫持，不是 `any:53` 语法错误；私人 DNS 已关，但只有 UDP 劫持、实际却是 TCP/53，补 `tcp://any:53`；劫持与内部 DNS 都正确、查询仍绕开 TUN，查 `strict-route`、`auto-route` 以及流量是否进入 TUN。不要指望用劫持列表去对抗系统私人 DNS。文档给出的顺序是先关掉它，再让 `dns-hijack` 把 53 端口导入已启用的内部 DNS。",
+        "资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://wiki.metacubex.one/en/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

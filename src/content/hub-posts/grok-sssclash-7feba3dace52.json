@@ -1,0 +1,64 @@
+{
+  "title": "FlClash 电脑端：批量延迟测试大量 Timeout，但手动选节点还能上网",
+  "description": "FlClash 电脑端：批量延迟测试大量 Timeout，但手动选节点还能上网。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-7feba3dace52",
+  "category": "故障排查",
+  "tags": [
+    "FlClash 批量测速 Timeout",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "批量延迟测试刷出大片 Timeout，但把其中一个节点手动切进代理组后，浏览器仍能打开网页。这通常不是节点协议已经挂掉，而是探测任务和真实浏览走了两条路。FlClash 电脑端用的是 mihomo 内核：列表上的批量测速，对应策略组的 url-test 或代理集合的健康检查，只对配置里的测试 URL 做短超时 HTTP 探测；你打开网站则还要经过 DNS、规则匹配和完整出站握手。严格 DNS 覆写、一次并发过多，都会把本来能用的节点标成 Timeout。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先用手动选择判断节点是否真的不可用",
+      "paragraphs": [
+        "url-test 组的关键字段是 `type: url-test`、成员、`url`、`interval`（文档示例为 300 秒），以及可选的 `tolerance`（切换容差，毫秒）和 `lazy`。它只回答一件事：在超时时间内，对指定 URL 有没有拿到符合预期的 HTTP 状态。它不会加载网页资源，也不保证走你给「这个网站」写的那条规则。",
+        "按场景判断，而不是按颜色判断：",
+        "- 手动选中该节点后，常用站点能打开、能刷新：出站可用，Timeout 是探测误判。\n- 手动选中后境外站点全部失败：先查节点参数、订阅和入站是否生效，而不是先改测速。\n- 只有自动选择组在跳、手动组正常：重点查探测 URL、期望状态码和 DNS。",
+        "在确认「手动能上网」之前，不要根据 Timeout 批量剔除节点。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把批量结果和单次 delay 对照",
+      "paragraphs": [
+        "批量测试会在短时间打出大量探测。内核可以把范围收到一个组或一个节点：",
+        "- 策略组：`GET /group/group_name/delay`，需带 `url` 和 `timeout`（文档示例为 `timeout=5000`），可选 `expected`（如 `200/204`、`200-299`）。返回是节点名到毫秒。该调用会清除自动组的 fixed 选择，测前要有预期。\n- 单个代理：`GET /proxies/proxies_name/delay`，参数同样是 url、timeout、expected。\n- 代理集合：`GET /providers/proxies/providers_name/healthcheck` 触发整集合检查。",
+        "建议步骤：",
+        "1. 记下一个批量 Timeout、但刚才手动能上网的节点名。\n2. 只对该名称发 delay，`url` 与当前 url-test 使用的探测地址一致。\n3. 单次能出延迟、批量仍大面积 Timeout：更像并发、本地解析排队或探测站限流。\n4. 单次也没有延迟、浏览却正常：探测 URL、`expected` 或 DNS 覆写与浏览路径不一致。",
+        "读取 `GET /proxies` 时可对照 `alive`、`history`、按测试 URL 分组的 `extra`，策略组还有 `testUrl`、`expectedStatus`。这些是内核眼里「这条探测死没死」的依据。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "严格 DNS 和过高并发会制造假 Timeout",
+      "paragraphs": [
+        "探测前要解析测试域名。若开启了严格 DNS、fake-ip，或探测域名被送到 reject、错误的 direct，探测会在握手前耗尽超时；你浏览的业务域名却可能走另一条规则，于是出现「能上网、测全死」。旧解析也会添乱：可按文档使用 `POST /cache/dns/flush` 与 `POST /cache/fakeip/flush` 后再测一次。",
+        "并发上，对整份订阅同时 url-test，等于忽略代理集合健康检查里 `lazy`（文档默认 true，集合未使用时不测）那种节流。超时窗口内排不到的节点都会被记成 Timeout，稍后手动选用却是通的。",
+        "处理顺序：自动组先改成手动，用能打开网页的节点工作；只对当前组做 delay；再核对探测域名的 DNS 与规则。Timeout 只是探测任务的结论，不是「节点已死」的充分条件。",
+        "资料：\nhttps://wiki.metacubex.one/config/proxy-groups/url-test/\nhttps://wiki.metacubex.one/api/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

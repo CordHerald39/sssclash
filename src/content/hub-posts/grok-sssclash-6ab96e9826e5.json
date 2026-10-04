@@ -1,0 +1,57 @@
+{
+  "title": "Clash TUN 的 auto-route 和 auto-redirect 在 Linux 上分别改什么",
+  "description": "Clash TUN 的 auto-route 和 auto-redirect 在 Linux 上分别改什么。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6ab96e9826e5",
+  "category": "配置教程",
+  "tags": [
+    "Clash TUN auto-route auto-redirect Linux 区别",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "auto-route 改的是全局路由",
+      "paragraphs": [
+        "在 Linux 电脑或路由器上，`auto-route` 自动设置全局路由，把全局流量导入 TUN 网卡。它写入的是系统路由（文档还给出 auto-route 生成的 iproute2 路由表索引，默认 2022，规则起始索引默认 9000），不是去改浏览器代理或环境变量。",
+        "判断依据：`tun.enable` 与 `auto-route` 均为 true 后，全局流量走向 TUN 设备；关闭后这些自动路由应消失。网卡在、默认路由仍走物理口，说明 auto-route 未生效，先查权限、device 名称，不要先开 auto-redirect。",
+        "电脑当终端时，auto-route 解决本机流量进 TUN。路由器上它为转发流量进 TUN 打底。Linux 下 UID、include-interface、exclude-interface 等限制也要求 auto-route 已启用；include-interface 与 exclude-interface 不能一起配置。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "auto-redirect 改的是 TCP 的 iptables/nftables",
+      "paragraphs": [
+        "`auto-redirect` 仅支持 Linux，自动配置 iptables 或 nftables 以重定向 TCP 连接，并且需要 auto-route 已启用。顺序必须是：先有全局路由进 TUN，再写 TCP 重定向。只开其中一项，都不符合文档前提。",
+        "判断依据：防火墙中出现由核心写入的 TCP 重定向；关闭 auto-redirect 后这些规则消失。文档对 Linux 的补充是：带有 auto-route 的 auto-redirect 现在可以在路由器上按预期工作，无需干预。不要再手工插一套互相覆盖的 nat 规则。",
+        "UDP 不在这条“重定向 TCP”的说明里。验证 UDP 应看 auto-route 与协议栈，不能只翻 TCP 重定向规则。",
+        "按来源 MAC 限制局域网设备的 include-mac-address、exclude-mac-address 仅 Linux，且需要 auto-route 与 auto-redirect 都启用。路由器上要按设备放行或排除时，先满足这两个开关。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "Android 热点与 Linux 路由器不要混用经验",
+      "paragraphs": [
+        "Android 上文档写明：仅转发本地 IPv4 连接。要通过热点或中继共享 VPN 连接，请使用 VPNHotspot。Linux 电脑或路由器不要去找同名开关。",
+        "Linux 路由器建议两者同时启用。步骤：打开 tun.enable 并指定 device；auto-route 设 true；auto-redirect 设 true；需要时再写 include-interface 或 exclude-interface；重载后分别看路由表、iproute2 表号以及 iptables/nftables 里的 TCP 重定向。",
+        "本机被接管而局域网没有：在路由器上检查二者是否同时为 true。热点分享失败且平台是 Android：按文档使用 VPNHotspot。strict-route 在 Linux 上让不支持的网络无法到达并把连接路由到 tun，它依附 auto-route，不能代替 auto-redirect。排障先看流量是否进网卡，再看 TCP 是否被重定向。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://wiki.metacubex.one/en/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

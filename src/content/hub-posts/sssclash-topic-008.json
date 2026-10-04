@@ -1,0 +1,55 @@
+{
+  "title": "Clash fallback 与 load-balance 代理组的选择逻辑有什么区别",
+  "description": "Clash fallback 与 load-balance 代理组的选择逻辑有什么区别。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-008",
+  "category": "版本对比",
+  "tags": [
+    "Clash fallback 代理组",
+    "版本对比",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "选择逻辑首先被 type 分开，算法细节不在本页",
+      "paragraphs": [
+        "代理组配置要求 `name` 必须；如有特殊符号，应当使用引号包裹。`type` 必须，用来声明策略组种类。手册目录将「自动回退」与「负载均衡」分列，并与自动选择、链式代理并列，说明二者不是同一类组，选择逻辑不能靠改组名或改探测地址来互换。示例给出的 `type` 是 `select`。本页正文没有列出自动回退、负载均衡的英文类型取值，也没有逐步描述「失败才换下一个」或「把连接分散到多个节点」的算法。能够写进结论的区别是：它们必须用不同的 `type` 标识；在本页能够核对的，是选路之前共用的成员范围和健康检查约束。",
+        "`proxies` 引入出站代理或其他策略组，`use` 引入代理集合。`include-all` 引入所有出站代理以及代理集合（不含策略组，策略组仍可写在 `proxies`）；`include-all-proxies` 与 `include-all-providers` 分别只引入出站或集合。`filter`、`exclude-filter` 按关键词或正则筛选，仅作用于引入的代理集合以及引入所有出站代理；`exclude-type` 不支持正则，通过 `|` 分割，仅排除引入的出站代理。选择逻辑再不同，也只能在过滤之后的成员里选。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "共用字段决定谁还能被选，而不是写成两种算法",
+      "paragraphs": [
+        "`url` 为健康检查测试地址。手册注明：只会检查代理组的 `proxies` 字段的代理，不会检查通过 `use` 引入的代理集合节点。无论最终是回退还是均衡，只要成员主要来自 `use`，就不能指望组级 `url` 给这些节点打出延迟。`interval` 为健康检查间隔，不为 0 则启用定时测试，单位为秒。`lazy` 默认 `true`，未选择到当前策略组时不进行测试。`timeout` 单位为毫秒。`max-failed-times` 超过则触发一次强制健康检查，默认 5。`expected-status` 在健康检查时要求 HTTP 状态码一致才认为可用，默认 `*`；可用 `/` 匹配多个状态码、用 `-` 匹配范围。这些字段改变的是「谁仍算可用」，然后才交给各自类型去做选择。不要把 `expected-status` 理解成负载均衡权重，也不要把 `max-failed-times` 理解成回退列表长度。",
+        "组为空时，`empty-fallback` 指定回退 proxy，默认为 `COMPATIBLE`，不支持填写代理组，只支持 proxy 名称。`default-selected` 指定默认节点，为空或名称不存在时选择组中第一个节点。这两项是成员缺失或默认值处理，不能代替未写出的回退顺序或均衡算法。`disable-udp` 禁用该策略组的 UDP。代理组中的 `interface-name` 与 `routing-mark` 已弃用。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "场景步骤、判断依据与失败后的下一步",
+      "paragraphs": [
+        "场景：名称像自动回退，流量却分散到多个节点，或名称像负载均衡却总走同一个。步骤：只核对 `type` 是否写了对应种类，不要用中文组名推断。判断依据是 `type` 字段本身。本页未给出类型枚举时，不要臆造取值后再声称已经按手册选路。",
+        "场景：`use` 引入大量集合节点，组上却看不到探测结果。步骤：对照上述 Note，确认这些节点是否只出现在 `use`。判断依据是组级检查是否仅覆盖 `proxies`。",
+        "场景：组空、全失败或 UDP 异常。步骤：查 `filter` 是否滤光；`empty-fallback` 是否误填策略组名；`max-failed-times` 是否触发强制检查；`disable-udp` 是否打开。判断依据是成员列表、空组回退名和探测失败次数，而不是未记载的哈希结果。",
+        "失败后的下一步：先固定类型与成员来源，再调整 `url`、`interval`、`lazy`、`timeout`、`expected-status`。算法细节若本页没有，就不要当成既定选择逻辑去改业务规则。",
+        "参考资料：https://wiki.metacubex.one/config/proxy-groups/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

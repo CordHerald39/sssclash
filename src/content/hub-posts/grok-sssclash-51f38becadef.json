@@ -1,0 +1,68 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：升级后订阅和全局扩展去哪个 AppData 目录找",
+  "description": "Clash Verge Rev 电脑端（Windows）：升级后订阅和全局扩展去哪个 AppData 目录找。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-51f38becadef",
+  "category": "操作教程",
+  "tags": [
+    "Clash Verge Rev 升级后订阅不见了",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "升级覆盖安装后界面空了，第一反应常常是订阅丢了、马上重下。文档把 Windows 数据分成 Local 的 WebView 缓存和 Roaming 的工作目录：前者升级后建议清空，后者才放 verge.yaml、订阅 YAML、全局扩展和订阅覆写。先按路径核对，再决定清缓存还是重下。",
+      "paragraphs": [
+        "场景：刚覆盖安装，主界面订阅列表空白，但资源管理器里 Roaming 的 profiles 仍有若干 YAML。此时应把这些文件视为仍在，先按文档清空 Local 的 WebView 缓存，并仅在窗口错位时删除窗口状态文件。不要为了界面空白去清空工作目录，也不要立刻向订阅源再拉取一份、覆盖本地已有的扩展配置。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "覆盖安装后界面空，先分清两个 AppData",
+      "paragraphs": [
+        "Windows 卸载与目录说明里，WebView 缓存目录是 `C:\\Users\\你的用户名\\AppData\\Local\\io.github.clash-verge-rev.clash-verge-rev`，并写明强烈建议每次升级后清空此目录。面板空白、窗口异常，应优先处理这一处。",
+        "软件工作目录是 `C:\\Users\\你的用户名\\AppData\\Roaming\\io.github.clash-verge-rev.clash-verge-rev\\`。主配置文件是同目录下的 `verge.yaml`。窗口状态文件是 `.window-state.json`，窗口出问题请删除此文件。隐私政策把同一位置写成 `%APPDATA%\\io.github.clash-verge-rev.clash-verge-rev`，并说明配置、凭据与日志仅保存在你自己的设备上，都是可随时查看、备份或删除的明文文件。",
+        "判断依据：托盘还能打开、只是界面空，先对 Local 缓存，而不是把 Roaming 整目录当丢失。覆盖安装主要替换程序文件，并不等于已经清空 profiles。升级后若只清理了安装目录，Roaming 里的明文文件通常还在。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "订阅 YAML 在 profiles 里核对，不要当丢失重下",
+      "paragraphs": [
+        "订阅（配置）文件目录是 `C:\\Users\\你的用户名\\AppData\\Roaming\\io.github.clash-verge-rev.clash-verge-rev\\profiles\\`，说明为存放订阅配置文件。隐私政策还列出 `config.yaml`、`profiles.yaml` 与 `profiles/`：其中是代理配置与已下载的订阅内容，通常包含订阅链接（往往内嵌个人 token）、节点地址、端口、密码与 UUID。",
+        "按下面步骤核对：",
+        "1. 在资源管理器地址栏输入 `%APPDATA%\\io.github.clash-verge-rev.clash-verge-rev` 后回车。\n2. 确认 `verge.yaml` 仍在，它是应用设置，不是订阅正文。\n3. 进入 `profiles`，对照升级前的订阅数量，查看 YAML 是否还在。\n4. 需要向别人说明链接时，只保留类似 `token=` 的参数片段，不要写出完整订阅网址。",
+        "判断依据：`profiles` 里文件还在，就不要当丢失立刻重下。重下会再生成一份本地副本，也容易打乱已经做好的订阅扩展。`logs/` 与 `service-logs/` 是日志，和订阅目录分开；按保留期清理日志，不会自动删掉 YAML。提交错误报告前请先脱敏，日志与配置可能暴露节点信息、订阅 token 以及访问过的域名。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "全局扩展和订阅覆写跟工作目录走",
+      "paragraphs": [
+        "扩展按文件类型分为配置和脚本：配置使用 yaml 对配置进行覆写或合并，脚本使用 javascript。按作用范围分为全局扩展和订阅扩展，这些扩展会同时生效。执行链路顺序是：订阅原文，再到应用设置，再到全局扩展配置、全局扩展脚本，再到订阅扩展配置、订阅扩展脚本，最后应用设置回写。",
+        "右键配置卡片，选择编辑扩展或脚本，即可进入编辑器。v1.7.x 版本的 Merge 配置改名为扩展配置，prepend 与 append 功能移动至订阅右键菜单中的可视化编辑器。扩展配置只改写出的字段，没写的字段保持不变。写出的 dns 字段和 hosts 会整体替换原有的值，全局扩展与订阅扩展之间也是如此。",
+        "设置页里的选项优先级高于订阅原文、扩展配置和扩展脚本。部分顶层字段由应用接管，扩展写入的值会在链路末尾被丢弃，应用会弹出提示，并在该扩展卡片的日志中记录，例如 mixed-port、mode、allow-lan、tun.enable 等。",
+        "判断依据：界面空只说明界面没有把工作目录画出来，不代表全局扩展或订阅覆写消失。先打开 Roaming 与 `profiles` 确认文件还在；确需处理界面时再清 Local 缓存。卸载应用并删除上述目录才会清除其余全部数据。隐私政策还说明，除非启用 WebDAV 备份、自行导出，或把文件附在错误报告里，否则这些数据不会离开设备。",
+        "资料：",
+        "https://www.clashverge.dev/uninstall.html",
+        "https://www.clashverge.dev/guide/extend.html",
+        "https://www.clashverge.dev/privacy.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

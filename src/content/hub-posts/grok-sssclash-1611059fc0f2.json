@@ -1,0 +1,63 @@
+{
+  "title": "Clash Party 电脑端（macOS）：开虚拟网卡失败，要不要改 tun 设备名",
+  "description": "Clash Party 电脑端（macOS）：开虚拟网卡失败，要不要改 tun 设备名。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-1611059fc0f2",
+  "category": "故障排查",
+  "tags": [
+    "Clash Party macOS TUN 打不开",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "troubleshooting",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "macOS 上打开 Clash Party 的虚拟网卡失败时，先看 TUN 设备名，而不是先改协议栈。mihomo 文档写明：指定 `device` 时，Mac 只能使用 `utun` 开头的网卡名。名字不合规，或其他 VPN 已经占用同一块 `utun`，创建会失败。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "名字必须是 utun 前缀",
+      "paragraphs": [
+        "文档示例是 `device: utun0`。这不是要求你必须占用 `utun0`，而是格式必须是 `utun` 加编号。写成以太网那种名字、或和系统里已经存在的接口重名，都会在创建阶段失败。",
+        "可以用这几条判断要不要改设备名：",
+        "- 失败发生在打开 TUN 时，系统代理仍可能正常。\n- 机器上还有其他 VPN 或透明代理，系统里已经能看到 `utun0`、`utun1` 一类接口。\n- 当前配置里的 `device` 不是 `utun` 开头。",
+        "占了两条，就值得改名。不要先去改 `mtu`，也不要去动 `gso`：文档写明通用分段卸载只支持 Linux，和 macOS 创建设备无关。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "和其他 VPN 错开编号",
+      "paragraphs": [
+        "`utun` 来自系统虚拟接口池。两个进程抢同一个名字，后启动的一方会失败。为了躲开常见的低编号占用，可以把设备名改到更靠后的位置，例如 `utun1500`，并确认客户端允许自定义该字段。编号本身没有加速作用，只表示「这块名字还没人用」。",
+        "步骤：",
+        "1. 先关掉其他 VPN，再打开 Clash Party 的 TUN。这时能成功，说明是争用，不是内核坏了。\n2. 若必须和别的 VPN 同时开，把 `device` 改成尚未出现的 `utun` 编号，保存后重启内核再开 TUN。\n3. 名字一旦改成非 `utun` 前缀，按文档可以直接判定不合法，不用再试别的字段。\n4. macOS 防火墙一般会放行带签名的应用。若防火墙开启后仍异常，按文档到「系统设置 -> 网络 -> 防火墙 -> 选项」添加 mihomo 应用，再看接口能否创建。",
+        "成功的判断依据是系统里出现你指定的那块 `utun`，并且 `auto-route` 打开后路由指向它。只看到开关处于开启、却没有对应接口，仍算失败。创建设备和「流量是否变快」不是同一件事，不要用速度去验收设备名。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改名解决不了的情况",
+      "paragraphs": [
+        "设备名只负责创建哪一块网卡。下面这些问题不要靠改名：",
+        "- `stack` 可选 `system`、`gvisor`、`mixed`、`mips`，这是协议栈实现。文档建议在无使用问题时保持默认栈，不要为了「开网卡」去换栈。\n- `auto-route`、`auto-detect-interface` 管流量有没有进 TUN。多出口网卡时，文档建议手动指定出口。\n- `dns-hijack` 在 macOS 上无法自动劫持发往局域网的 DNS，这和 `device` 无关。\n- 若 GUI 都起不来，应先处理配置目录权限，和 TUN 设备名不是同一层。",
+        "先确认名字合法且空闲，再查路由和防火墙。不是所有「虚拟网卡失败」都等于要改 `utun` 编号；只有创建失败、且系统里已有同名接口或名字不合规时，改名才是对症步骤。",
+        "https://wiki.metacubex.one/config/inbound/tun/\nhttps://github.com/mihomo-party-org/clash-party/releases/tag/v1.8.4"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

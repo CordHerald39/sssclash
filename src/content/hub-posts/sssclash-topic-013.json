@@ -1,0 +1,64 @@
+{
+  "title": "Clash mixed-port 与 HTTP、SOCKS 端口怎么区分",
+  "description": "Clash mixed-port 与 HTTP、SOCKS 端口怎么区分。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-013",
+  "category": "配置教程",
+  "tags": [
+    "Clash mixed-port",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "入站端口决定客户端用哪种代理协议连上内核。port 提供 HTTP(S) 代理，socks-port 提供 SOCKS4/4a/5，mixed-port 则在同一端口上同时接受 HTTP(S) 与 SOCKS5。三者不是同一字段的别名，也不能靠“换一个数字”让 HTTP 口突然听懂 SOCKS4。区分它们时，应对照字段名、端口号和客户端允许填写的协议，再决定开一个混合口还是分开两个专用口。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "三个端口字段各自做什么",
+      "paragraphs": [
+        "资料中的示例如下：",
+        "```\nport: 7890\nsocks-port: 7891\nmixed-port: 7892\n```",
+        "port 标注为 http(s) 代理端口。socks-port 标注为 socks4/4a/5 代理端口。mixed-port 的说明是：混合端口是一个特殊的端口，它同时支持 HTTP(S) 和 SOCKS5 协议；可以使用任何支持 HTTP 或 SOCKS 代理的程序连接到这个端口。",
+        "因此，只认 HTTP 代理的软件可以指向 port 或 mixed-port；只认 SOCKS5 的软件可以指向 socks-port 或 mixed-port；仍在使用 SOCKS4/4a 的软件应对准 socks-port，因为混合口明确写的是 HTTP(S) 与 SOCKS5，没有把 4/4a 写进去。",
+        "同一页还给出透明代理端口：redir-port 仅限 Linux（Android）以及 macOS，且仅能代理 TCP；tproxy-port 仅限 linux（Android），可代理 TCP 与 UDP。它们解决的是系统级接管，不是给浏览器或终端填“代理服务器”。不要用 mixed-port 去替代 redir 或 tproxy，也不要在不适用的平台上为缺失的透明口排错。",
+        "页面标题把 http/socks/mixed 的验证与外部访问放在一起提示：这三种代理口共用后续的用户验证、是否允许其他设备接入等全局项。端口号只解决“听什么协议”，不解决“谁可以从旁接入”。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按客户端协议做检查",
+      "paragraphs": [
+        "1. 在配置里分别查看 port、socks-port、mixed-port 是否出现。缺省某一项，表示未开启对应入站，客户端再去连那个数字没有意义。\n2. 三个已启用的端口号必须互不相同，避免争用同一本地端口。\n3. 看客户端能填的类型。只能填 HTTP 主机和端口时，目标应是 port 或 mixed-port；只能填 SOCKS5 时，目标应是 socks-port 或 mixed-port；必须 SOCKS4/4a 时，只使用 socks-port。\n4. 希望少暴露端口、同时服务 HTTP 与 SOCKS5 客户端时，保留 mixed-port，在各软件里仍按各自协议填写，只是地址和端口都指向混合口。\n5. 若目的是网关透明接管，转去确认 redir-port 或 tproxy-port 是否配置、当前系统是否落在文档写明的适用范围内，而不是反复改 7892。",
+        "判断依据：指向 mixed-port 时，使用 HTTP 代理的程序与使用 SOCKS5 的程序都应能按各自协议建立连接。只有其中一种成功，优先怀疑客户端协议类型填错，而不是混合口“只启用了一半”。把 SOCKS 握手打到 port，或把 HTTP CONNECT 打到 socks-port，属于口与协议不一致，应改客户端或改字段，而不是认为内核随机丢包。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "连接失败时的下一步",
+      "paragraphs": [
+        "连接被拒绝或超时：先确认对应字段已写出且该端口空闲，再确认客户端填的数字就是该字段的值。HTTP 客户端打到 socks-port、SOCKS4 客户端打到 mixed-port，都会表现为失败，这是协议边界，不是“再换一个混合端口号就能兼容 4/4a”。",
+        "本机可以、其他设备不行：三种入站在协议上的差别解释不了这件事。应到全局配置里看是否允许局域网以及绑定地址，而不是在 port 与 mixed-port 之间来回切换。",
+        "透明代理没有流量：先核对平台。macOS 不要去等 tproxy-port；需要 UDP 时 redir-port 不够，应看 tproxy-port 是否适用。把透明口的问题当成 mixed-port 配置错误会绕远路。",
+        "三个口都开着、仍不确定软件填哪一个：能在 HTTP 与 SOCKS5 中二选一的软件，可统一指向 mixed-port 以减少监听数量；锁定 SOCKS4 的软件指向 socks-port；关闭了混合口、又只提供 HTTP 代理设置的软件指向 port。",
+        "https://wiki.metacubex.one/config/inbound/port/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

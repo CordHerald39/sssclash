@@ -1,0 +1,75 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：微软商店和 UWP 不走系统代理，UWP 工具怎么勾",
+  "description": "Clash Verge Rev 电脑端（Windows）：微软商店和 UWP 不走系统代理，UWP 工具怎么勾。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-bd0c28201d57",
+  "category": "操作教程",
+  "tags": [
+    "Clash Verge Rev 微软商店 不走代理",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "系统代理已经打开，微软商店和部分 UWP 仍直连或打不开，根因往往不是订阅失效，而是 UWP 沙盒默认不能访问 127.0.0.1。代理在本地端口监听，商店进不了回环，就会绕过或失败。Clash Verge Rev 文档给出应用内 UWP 工具；微软文档用 CheckNetIsolation.exe 做回环豁免和隔离排查。",
+      "paragraphs": [
+        "场景：普通桌面浏览器已经走系统代理，微软商店首页异常或下载仍像直连。先确认系统代理已开，再进入 UWP 工具勾选商店并保存。不要先怀疑订阅过期。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先判断是回环隔离，而不是代理没开",
+      "paragraphs": [
+        "Windows 常见问题写明：Windows 系统 UWP 应用（如微软商店等）无法使用代理。问题原因是 UWP 存在沙盒机制，正常情况下无法访问 localhost（即无法访问回环地址），而代理程序在本地端口监听请求，因此需要解除 UWP 应用的回环访问限制。",
+        "判断依据：",
+        "1. 普通桌面浏览器已经走系统代理，微软商店或其它 UWP 仍像直连。\n2. 系统代理已开启，端口与客户端监听一致。\n3. 同一台机器上非 UWP 应用表现正常。",
+        "满足以上，按回环豁免处理，不要先改订阅、不要先重装。安装说明的文件清单里，资源目录有 `enableLoopback.exe`，注释为解除 UWP 应用网络回环限制工具，和设置里的 UWP 工具是同一类能力。",
+        "若连 Clash Verge Rev 自己的界面都没有，应先对照安装说明：多数机器下载 x64 而不是 arm64；缺少 WebView2 时表现为程序能启动但托盘菜单没反应。那不是商店回环问题。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "在设置里打开 UWP 工具，勾选后保存",
+      "paragraphs": [
+        "解决方案：打开 Clash 设置 -> UWP 工具，找到需要解除限制的 UWP 程序。勾选需要解除限制的 UWP 程序后，点击工具顶部的 Save Changes 按钮保存修改。",
+        "建议步骤：",
+        "1. 打开 Clash Verge Rev 设置，进入 UWP 工具。\n2. 在列表中定位微软商店或实际异常的 UWP。\n3. 勾选对应项。\n4. 点击工具顶部的 Save Changes 保存。\n5. 再打开商店，观察流量是否仍绕过本地端口。",
+        "判断依据：文档要求勾选之后必须保存。只勾不保存，限制不会按该条目生效。保存后仅那一批被勾选的 UWP 获得回环访问，未勾选的应用仍受沙盒限制。",
+        "微软文档指出，使用 IP 回环地址不能用于两个不同应用之间的进程间通信，这受网络隔离限制；开发者若要在 127.0.0.1 上访问本机服务，需要把应用加入豁免。它同时写明：回环主要用于开发目的。商店场景仍以 Clash Verge Rev 的 UWP 工具条目为准来操作。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "命令行用 CheckNetIsolation，并和安装架构问题分开",
+      "paragraphs": [
+        "微软文档提供 CheckNetIsolation.exe，可查看、添加或删除回环豁免。查看当前豁免：",
+        "```\nCheckNetIsolation.exe LoopbackExempt -s\n```",
+        "按包标识添加豁免时需要提供该应用自己的 SID，文档示例形式如下（不要把示例 SID 当成商店的标识）：",
+        "```\nCheckNetIsolation.exe LoopbackExempt –a –p=S-1-15-2-4125766819-3228448775-2449327860-2490758337-1264241865-3581724871-2122349299\n```",
+        "也可按 App Container 名称：",
+        "```\nCheckNetIsolation.exe LoopbackExempt –a –n=stocks_mw26f2swbd5nr\n```",
+        "删除单应用用 `–d`，清除本机全部豁免用 `LoopbackExempt –c`。文档还说明：Windows Runtime 应用只能把 IP 回环当作客户端请求的目标地址；在回环上监听的套接字收不到包。",
+        "判断依据：UWP 工具能勾选并保存时，优先走应用内工具。只有列表没有目标应用、或需要核对本机豁免名单时，再使用 CheckNetIsolation 的 `LoopbackExempt -s` 对照。不要把「此应用无法在你的电脑上运行」当成回环问题，那一条写的是下错架构安装包。带有 fix_webview2 字样的安装包只用于系统缺少且无法安装 WebView2 的情况，和商店是否走代理不是同一件事。",
+        "资料：",
+        "https://www.clashverge.dev/faq/windows.html",
+        "https://www.clashverge.dev/install.html",
+        "https://learn.microsoft.com/en-us/previous-versions/windows/apps/hh780593(v=win.10)"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Clash DNS 的 default-nameserver 解析谁，为什么不能填域名",
+  "description": "Clash DNS 的 default-nameserver 解析谁，为什么不能填域名。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e95602e64251",
+  "category": "配置教程",
+  "tags": [
+    "Clash DNS default-nameserver 必须是 IP",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash 的 `default-nameserver` 经常被当成“默认上网 DNS”来填。文档里的分工不是这样：它只给 DNS 上游自己的主机名做解析，而且必须能在不依赖域名系统的前提下拨通。用户访问的网站、节点域名、直连出口，分别由别的字段负责。下面按场景把字段拆开，并给出可核对的判断依据。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "default-nameserver 解析的是谁",
+      "paragraphs": [
+        "内部 DNS 启用后，`nameserver`、`nameserver-policy` 里常常会写加密上游。只要上游写成域名，内核必须先得到该域名的 IP，才能把查询发出去。`default-nameserver` 专门做这一件事：解析 **DNS 服务器的域名**。",
+        "文档约束有两句，写配置时当作硬条件：",
+        "- 必须是 IP。\n- 可以为加密 DNS。",
+        "因此这里允许 `223.5.5.5` 这种明文 IP，也允许 `tls://8.8.4.4` 这种“协议 + IP”。不允许再套一层还需要解析的主机名。若把域名填进去，就会出现“解析 DNS 还要先解析 DNS”的循环，上游永远进不去。",
+        "判断依据：这一列表里的每一项，在系统还没有可用域名解析时，也必须能直接连通。看到主机名、需要再查一次 A/AAAA 才能拨号的条目，就可以判定写错了位置。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用户域名、节点域名、直连域名各走哪条",
+      "paragraphs": [
+        "不要把三类查询塞进 `default-nameserver`。对应关系如下。",
+        "用户域名（浏览器、App 访问的名字）由 `nameserver-policy` 指定服务器。键支持域名通配，值可以是字符串或数组，并且 **优先于** `nameserver` 与 `fallback`。需要按规则集或后缀分流时，应写在 policy，而不是 default 列表。",
+        "代理节点域名只应由 `proxy-server-nameserver` 解析。不填则遵循 `nameserver-policy`、`nameserver` 和 `fallback`。`proxy-server-nameserver-policy` 格式与 policy 相同，仅用于节点，且当且仅当 `proxy-server-nameserver` 非空时生效。节点是域名、查询又想走代理时，文档要求配好该字段，避免鸡蛋问题。",
+        "DIRECT 出口使用 `direct-nameserver`。不填则遵循 policy、nameserver 与 fallback。`direct-nameserver-follow-policy` 控制是否遵循 `nameserver-policy`，**默认为不遵守**，且仅当 `direct-nameserver` 不为空时生效。直连解析结果和规则“对不上”时，先看是不是默认没跟随 policy。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按场景填写与验收",
+      "paragraphs": [
+        "场景：节点地址是域名，内网与直连走 DIRECT，其余走代理。",
+        "1. 打开 `dns.enable`。为 false 时使用系统 DNS，后续字段不会按内核逻辑工作。\n2. `default-nameserver` 只写 IP 或“加密协议 + IP”，用于解开上游主机名。\n3. 把节点解析单独放到 `proxy-server-nameserver`；若要对个别节点主机做例外，再写 `proxy-server-nameserver-policy`。\n4. 用户域名的分流写在 `nameserver-policy`（例如 `+.arpa`、规则集）。\n5. 需要锁定直连出口 DNS 时填写 `direct-nameserver`（可为 `system`）。只有明确希望直连也走 policy 时，才把 `direct-nameserver-follow-policy` 改为 true。",
+        "验收时逐项对照：default 列表没有任何待解析主机名；改用户域名的查询目标只动 policy，不改 default；节点能在未完成用户域名解析前解析成功；直连域名在 follow-policy 为 false 时，不会被 policy 条目带走。若开启 `respect-rules`，DNS 连接会遵守路由规则，同样需要 `proxy-server-nameserver`。本文不展开 nameserver 与 fallback 的对比，只要记住：default 不参与用户域名的最终查询选择。",
+        "```yaml\ndns:\n  enable: true\n  default-nameserver:\n    - 223.5.5.5\n    - tls://8.8.4.4\n  nameserver-policy:\n    '+.arpa': '10.0.0.1'\n  proxy-server-nameserver:\n    - tls://1.1.1.1\n  direct-nameserver:\n    - system\n  direct-nameserver-follow-policy: false\n```",
+        "资料：\nhttps://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/en/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

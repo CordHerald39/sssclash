@@ -1,0 +1,59 @@
+{
+  "title": "Clash fake-ip-filter 怎么用，哪些域名需要单独处理",
+  "description": "Clash fake-ip-filter 怎么用，哪些域名需要单独处理。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-002",
+  "category": "配置教程",
+  "tags": [
+    "Clash fake-ip",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在 fake-ip 模式下，内核会为域名分配映射地址。fake-ip-filter 用来决定哪些域名不要走这套映射。适用条件是 dns.enable 为真，并且 enhanced-mode 为 fake-ip；若仍是默认的 redir-host，过滤列表不会按 fake-ip 语义生效。排查时不要把它和 nameserver、fallback 清单当成同一层配置。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先确认模式再解释名单方向",
+      "paragraphs": [
+        "enhanced-mode 可选 fake-ip 或 redir-host，默认 redir-host。fake-ip-range 给出 IPv4 映射网段，fake-ip-range6 给出 IPv6 映射网段。fake-ip-filter 的说明是：列表中的地址不会下发 fakeip 映射用于连接；值支持域名通配，也可以引入域名集合。fake-ip-filter-mode 可选 blacklist、whitelist、rule，默认 blacklist。",
+        "在 blacklist 下，命中名单的域名不走 fake-ip 映射，未命中的仍可能使用映射地址。在 whitelist 下逻辑相反，只有匹配成功才返回 fake-ip。判断依据：先看 enhanced-mode 是否为 fake-ip，再看 filter-mode，最后才读名单条目。不要只根据列表里有没有某个域名下结论。",
+        "操作步骤：打开 dns 段，依次确认 enable、enhanced-mode、fake-ip-filter-mode、fake-ip-filter；把当前要排查的域名代入名单，按模式判断它应得到映射地址还是真实地址。若现象与预期相反，下一步先核对 mode 的方向，而不是继续往名单堆通配符。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "哪些域名需要单独处理",
+      "paragraphs": [
+        "文档示例把 *.lan 放进过滤列表，对应局域网名称不应占用 fake-ip 映射的场景。nameserver-policy 里对 +.arpa 单独指定解析服务器，说明反向查询类后缀也不应与普通递归混用。需要单独处理的通常是：只在局域网有效的名称、必须落到真实地址才能完成连接或校验的域名，以及你已经指定了专用解析服务器的后缀。",
+        "当 fake-ip-filter-mode 设为 rule 时，名单写法改为与路由 rules 一致，自上而下匹配，语法支持 GEOSITE、RuleSet、DOMAIN 类规则和 MATCH。文档示例中，指定主机名或后缀可标记为 real-ip 或 fake-ip，最后用 MATCH 收口。此时需要单独处理的域名应写成明确规则，而不是混在普通通配字符串里。被引用的规则集 behavior 必须是 domain 或 classical；classical 时只有域名类规则生效。判断依据：每一条都能说出命中后是 fake-ip 还是 real-ip，并且不会被更靠前的规则提前吃掉。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "检查顺序和失败后的下一步",
+      "paragraphs": [
+        "具体检查：确认 listen 与 enable 符合预期；确认过滤项没有误写进 nameserver-policy 或 fallback-filter 的 domain；rule 模式下核对规则顺序和 MATCH 收口；引用规则集时确认集合内容确实是域名。fallback-filter 用于判断是否采用 fallback 结果，和是否下发 fake-ip 映射不是同一层，不能互相粘贴。非必要不要改 fake-ip-ttl。",
+        "若局域网名称仍被映射，下一步按当前 mode 正确放入 *.lan 或改写成 DOMAIN 类规则，并确认不是 whitelist 把局域网排除在外。若只有名单中的域名能连接、其他全部失败，检查是否误设为 whitelist。若 rule 模式完全不生效，检查规则集 behavior 是否不符合要求，或 classical 集合里写了非域名规则。",
+        "https://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

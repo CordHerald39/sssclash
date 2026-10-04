@@ -1,0 +1,63 @@
+{
+  "title": "FlClash 电脑端（macOS）：关掉托盘流量显示后 CPU 仍然很高、电池掉得快",
+  "description": "FlClash 电脑端（macOS）：关掉托盘流量显示后 CPU 仍然很高、电池掉得快。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-903d5dbd7f3c",
+  "category": "故障排查",
+  "tags": [
+    "FlClash macOS 托盘耗电",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "macOS 上把「显示托盘流量」关掉以后，FlClash 主进程占用仍然偏高、笔记本发热、电池掉得快，并不说明开关坏了或流量统计还在画数字。相关 issue 的技术分析指向另一件事：只要托盘标题更新还在跑，即使用户关闭了标题显示（`showTrayTitle = false`），代码仍可能每秒调用一次 `trayManager.setTitle('')`。在 macOS 上，给状态栏设标题——哪怕是空字符串——也会走到 `NSStatusItem` 的整栏重绘。要降温，需要停掉这条标题更新，而不是只把开关拨到关。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "关显示不等于停更新",
+      "paragraphs": [
+        "issue 里描述的调用链是：定时器每秒触发 → 更新流量数据 → `trayTitleState` 随流量 provider 变化 → macOS 托盘逻辑监听到变化 → `setTitle('')` → 系统 `_updateReplicants` 完整重绘。采样中反复出现 `_updateReplicants`、`_redrawReplicantSnapshot`、CALayer 与 AutoLayout，说明时间花在状态栏，而不是「暗中继续算网速给用户看」。",
+        "判断依据：",
+        "- 只在 macOS 上出现，Windows / Linux 代码路径有平台判断、不走同一套状态栏标题：和 issue 中的影响范围一致。\n- 关闭「显示托盘流量」后占用仍高，活动监视器里 GUI 进程忙、不一定是内核进程单独忙：更像托盘重绘，而不是代理转发本身。\n- 多显示器、非活动屏幕菜单栏图标闪烁：与「每秒重绘 replicant」相符。\n- 对进程做 `sample FlClash` 时，热点落在 `NSStatusItem` 而不是加解密：不要先去改节点或 TUN。",
+        "项目说明里，桌面端确实有托盘菜单；macOS 12 及以上提供 Apple Silicon 与 Intel 两套安装包。托盘是产品能力，但状态栏 `setTitle` 的成本是系统行为，关文案显示消除不了这次系统调用。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按版本和采样确认是不是这条热路径",
+      "paragraphs": [
+        "issue 针对的是 v0.8.91 一类构建，并指出问题在 v0.8.88 到 v0.8.91 的重构区间出现。评论里有人降到 0.8.87 后占用恢复正常，也有人在 Intel Mac、多 4K 屏上复现，说明不限于 Apple Silicon。",
+        "建议步骤：",
+        "1. 记下当前版本。若处于上述区间，把「关掉流量标题仍高占用」当作已知托盘缺陷，而不是电池硬件故障。\n2. 关闭显示后，打开活动监视器，观察 FlClash 图形进程是否持续偏高；不要把内核进程的短暂波动当成同一问题。\n3. 需要核对原因时，用系统自带的 `sample` 抓一段调用栈，看是否大量命中 `_updateReplicants`。这是判断「空字符串仍在 setTitle」的依据。\n4. 若采样对得上，处理方向是：**避免每秒重复 setTitle**（包括对空字符串去重、标题未变化则不调用）。issue 后续讨论也强调：仅在设置里关闭流量标题，并不能修复旧版本。",
+        "不要指望再找一个「更彻底的关闭流量」开关。开关管的是标题内容，不管平台 API 有没有被每秒点一次。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "在修复进入你使用的构建之前怎么处理",
+      "paragraphs": [
+        "官方说明与 issue 都没有把「关闭托盘流量」写成降占用手段。在标题去重尚未进入你手中的版本时，可选办法只有两类：换到讨论中已经包含托盘标题去重的构建，或暂时避开会每秒刷新托盘标题的版本。评论里提到后续应关注相关修复讨论，并以「平台调用成功后再写缓存、销毁时清缓存」一类实现细节为准。",
+        "同时注意：隐藏主窗口、只留菜单栏，不会减少 `NSStatusItem` 的定时重绘；多显示器、「显示器具有单独的空间」还会放大 replicant 数量。这与订阅质量、节点延迟无关，换节点不会打断这条 AppKit 路径。",
+        "结论：macOS 状态栏每次 `setTitle` 都会整栏重绘；关掉显示后若仍在用空字符串刷新，CPU 和耗电问题会留着。真正要停的是托盘标题更新本身。",
+        "资料：\nhttps://github.com/chen08209/FlClash/issues/1644\nhttps://github.com/chen08209/FlClash/blob/main/README_zh_CN.md"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

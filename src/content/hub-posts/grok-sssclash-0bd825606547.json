@@ -1,0 +1,58 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：切换 Wi-Fi 后系统代理悄悄失效怎么办",
+  "description": "Clash Verge Rev 电脑端（macOS）：切换 Wi-Fi 后系统代理悄悄失效怎么办。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-0bd825606547",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev 换WiFi 代理失效",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在 macOS 上使用 Clash Verge Rev 的系统代理模式时，故障不一定表现为报错，而可能是换了一个 Wi-Fi 之后流量已经全部直连，界面却仍显示代理开着。公开缺陷记录把这种现象称为系统代理在切换无线网络后静默失效，并指出全新安装里 `enable_proxy_guard` 默认关闭。下面按家里热点和公司热点来回切换这一具体场景，给出判断依据和处理步骤。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "换 SSID 后代理被空配置替换",
+      "paragraphs": [
+        "实际行为可以按时间线核对。用户在 Wi-Fi 网络 A 启用系统代理，工作正常；切换到 Wi-Fi 网络 B 后，macOS 加载网络 B 自己的代理配置，而该配置往往是空的；于是全部流量静默绕过 Clash Verge，没有错误，也没有通知；再切回网络 A，系统重新读出先前为 A 保存的代理，又恢复正常。因为失败过程完全静默，很难第一时间意识到流量未经过 Clash。",
+        "判断时抓住三个特征同时成立：只在更换 SSID 后出现；切回原 SSID 会自行恢复；软件侧没有任何提示。若同一 SSID 下反复断网重连并不出问题，更说明是另一份空配置被加载，而不是核心进程退出。该问题针对系统代理模式，记录中的环境使用 verge-mihomo 核心，模式明确不是 TUN。不要用 TUN 是否连通来证明系统代理还在。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "根因是按热点存代理，且 proxy guard 默认关闭",
+      "paragraphs": [
+        "macOS 把 HTTP、HTTPS、SOCKS 代理关联到具体网络服务，每一个 Wi-Fi SSID 单独保存一份。对当前无线服务执行 `networksetup -setwebproxy Wi-Fi 127.0.0.1 7890` 时，写入只作用于当前已连接的 SSID，不会复制到尚未连接过的其他热点。因此在办公室写成功，到另一处热点仍可能是空的。",
+        "软件内置的 `enable_proxy_guard` 会定期检查并重新应用代理，本来可以弥补换网后被清空的情况，但全新安装默认是 `false`。默认关闭时，操作系统清掉代理后，Clash Verge 不会自动写回，也不会告警。缺陷记录提出的改进是：启用系统代理时将该项默认改为 `true`，或在检测到配置被清空时给出通知。在默认值改变之前，需要到 `verge.yaml` 里确认该字段。记录环境包括 macOS 15 与 Apple Silicon，可用于对照自己的系统大版本，但机制本身是按 SSID 存代理，并不依赖某一款芯片。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "换网场景下的检查与修改步骤",
+      "paragraphs": [
+        "第一步，固定连在网络 A，打开系统代理，在终端执行 `networksetup -getwebproxy Wi-Fi`，确认当前热点下代理已启用，地址与端口与 Clash 监听一致（记录示例为 `127.0.0.1` 与 `7890`）。第二步，切换到网络 B，必须是另一个 SSID 名称，而不是飞行模式后再连回 A。第三步，立刻再跑同一条 `getwebproxy` 命令。若结果变为未启用或代理消失，即可判定网络 B 加载了空配置，流量已经直连。第四步，打开 `verge.yaml`，查看 `enable_proxy_guard`；全新安装应为 `false`。把它改为 `true`，以便定期检查并重新应用。第五步，保存配置并重新启用系统代理，在网络 B 上再次查询。若代理被重新写入本机地址，说明守护已在换网后补配置。第六步，再切回 A 做对照：A 恢复只能说明该 SSID 的旧记录还在，不能用来证明 B 上从未丢过代理。",
+        "还要注意边界。全程无通知，符合静默失效，不能因为软件没报错就认为流量仍受保护。若 `getwebproxy` 仍显示代理存在，但某个应用自己不走系统代理，则不属于本次整网被清空，应另案处理。经常在多个热点间移动时，打开 `enable_proxy_guard` 应视为系统代理模式的配套项，而不是可有可无。不要只反复开关系统代理却不看命令行输出，否则只会把当前 SSID 被重新写入误当成所有热点都已修好。每次变更热点后抽查一次 `networksetup -getwebproxy Wi-Fi`，是判断是否悄悄直连的直接依据。",
+        "资料：https://github.com/clash-verge-rev/clash-verge-rev/issues/6529"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

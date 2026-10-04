@@ -1,0 +1,54 @@
+{
+  "title": "Clash proxy-providers 更新间隔与健康检查分别控制什么",
+  "description": "Clash proxy-providers 更新间隔与健康检查分别控制什么。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-006",
+  "category": "配置教程",
+  "tags": [
+    "Clash proxy-providers",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "更新间隔控制集合内容刷新",
+      "paragraphs": [
+        "代理集合（proxy-providers）里，顶层 `interval` 的含义是更新 provider 的时间，单位为秒。它只负责按周期重新获取该集合的节点列表，不负责测量某个节点此刻是否可用。`type` 为 `http` 时必须配置集合下载地址，可选 `path`；不填写路径时会使用下载地址的 MD5 作为文件名。`proxy` 表示经过指定代理进行下载或更新，`header` 用于自定义请求头，`size-limit` 限制下载文件的最大大小，默认为 0 即不限制，单位为字节。由于安全问题，路径只允许在 HomeDir（启动参数 `-d`）中；若要存到其他位置，需设置 `SAFE_PATHS`，语法同系统 PATH。",
+        "集合 `name` 必须且不能重复，建议不要和策略组名称重复。`type` 必须，可选 `http` / `file` / `inline`。名字与类型先决定集合能不能加载；加载成功后，顶层 `interval` 才有对象可刷新。`file` 与 `inline` 没有同等的远程拉取节奏。`payload` 在 `inline` 时作为内容；当 `http` 或 `file` 解析失败时，也可以使用 `payload` 作为备用代理。若间隔到了名单却变成备用节点，应判断为下载或解析失败，而不是延迟测试失败。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "健康检查间隔控制延迟测试",
+      "paragraphs": [
+        "`health-check` 在手册中明确写作健康检查（延迟测试）。`enable` 为是否启用；其 `url` 为健康检查地址，推荐使用 Cloudflare 或 Google 的 generate_204 一类地址；其 `interval` 为健康检查间隔时间，单位为秒；`timeout` 为健康检查超时时间，单位为毫秒。顶层更新间隔与探测间隔虽然都用秒，超时却用毫秒，单位抄错会表现为请求几乎立刻失败。",
+        "`lazy` 默认为 `true`，不使用该集合节点时，不进行测试。所以只把探测间隔改小，若没有任何策略组用到这些节点，探测仍可跳过。`expected-status` 需对照期望状态：不符合时节点不会被当成探测成功。`filter` 与 `exclude-filter` 按关键词或正则筛选或排除，可用反引号区分多个正则；`exclude-type` 不支持正则，通过 `|` 分割，按节点类型排除。这些过滤发生在探测之前，会改变被测对象，但不会改写任何一种 interval。`override` 只覆写节点字段，同样不能把更新间隔变成探测间隔。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "具体场景中的步骤、判断依据与下一步",
+      "paragraphs": [
+        "场景一：远程名单已增删，本地集合不变。步骤：确认 `type` 为 `http`；查看顶层 `interval`（示例为 3600 秒）是否到期；核对下载所用 `proxy`、`header`、`size-limit`；检查 `path` 是否越出安全目录；若配置了 `age-secret-key`，确认加密为 age armor 且密钥类型受支持。判断依据是到期后文件内容、节点数量是否变化。没有变化就不要去改 `health-check.interval`。",
+        "场景二：名单已更新，延迟全空或全超时。步骤：确认 `health-check.enable` 为 `true`；核对接探测地址、探测间隔、毫秒超时、`lazy` 与 `expected-status`。判断依据是集合确已被使用、且并非懒惰跳过时，延迟是否随探测间隔出现。",
+        "失败后的下一步：解析或下载失败时优先检查 `payload` 备用、请求头、路径和密钥；探测失败时只调整 `health-check` 子项。两套 interval 不要对调着改，也不要用集合更新去修复延迟，或用延迟测试去修复空列表。",
+        "参考资料：https://wiki.metacubex.one/config/proxy-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

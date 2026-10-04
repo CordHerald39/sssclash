@@ -1,0 +1,54 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：商店版 Telegram 为什么不走系统代理",
+  "description": "Clash Verge Rev 电脑端（macOS）：商店版 Telegram 为什么不走系统代理。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6b24fa6ff2d3",
+  "category": "操作教程",
+  "tags": [
+    "Clash Verge Rev Telegram 不走代理",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "商店版 Telegram 默认不遵守系统代理",
+      "paragraphs": [
+        "Clash Verge Rev 的 macOS 常见问题写明：App Store 商店中的 Telegram 等同 Telegram for macOS 的 Swift 版本，默认不遵守系统代理。因此即使用户已经打开系统代理，商店版的对话、媒体和连接仍可能走直连。这件事不能用来判断 TUN 没有开启，也不能用来判断节点已经全部失效。",
+        "商店版、系统代理、TUN 是三套不同的路径。系统代理依赖 macOS 网络偏好中的全局设置；TUN 依赖虚拟网卡和路由；Swift 版 Telegram 只认自己应用内填写的代理。把这三套混在一个开关上，就会出现 Clash 侧一切正常、唯独 Telegram 不行的误判。先做对照：同一时刻，用会遵守系统代理的浏览器或终端访问需要节点的站点，再观察商店版 Telegram。前者通、后者不通，就可以把范围收窄到 Telegram 自身策略。若所有应用都不通，再查系统代理有没有真正写入 macOS。",
+        "文档另有一条：点击系统代理开关后，系统偏好里实际未被修改，原因是更改锁定的系统偏好设置需要管理员密码。到安全性与隐私的高级选项，关闭访问系统范围偏好设置需要输入管理员密码，再试开关。窗口从菜单栏托盘点不开，是接入其他显示器时记忆了错误位置，应调整显示器布局或暂时拔掉副屏，不要当成 Telegram 的代理失败。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "在 Telegram 里填写 mixed-port",
+      "paragraphs": [
+        "文档给出的第一条处理方式是在 Telegram 应用内设置代理，默认代理端口为 7897。操作前确认 Clash Verge Rev 已在运行，并确认当前 mixed 端口仍是 7897；若曾经改过端口，以客户端里正在监听的端口为准。打开 Telegram 的连接或代理设置，主机使用本机回环地址，端口填入上述 mixed-port，保存后再发送消息或刷新对话。不要只反复开关 Clash 的系统代理，因为 Swift 版默认不会去读取那一项。",
+        "判断依据有三条：Clash 侧 mixed 端口与填写值一致；其他遵守系统代理的应用已经通；只有商店版 Telegram 失败。三条满足就在 Telegram 内填代理，而不是重装 Clash、卸载服务，或为了这一个应用去开关 TUN。TUN 在 macOS 上无法劫持发往局域网的 DNS，客户端会在启动 TUN 时改写系统 DNS，关闭后再恢复。那是 TUN 的工作条件。商店版忽略系统代理是客户端策略，两条线不要拧在一起。为 Telegram 频繁开关 TUN，只会让系统 DNS 在改写和恢复之间来回，解决不了 Swift 版不读系统代理的问题。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改用 QT 版，并剥离开无关故障",
+      "paragraphs": [
+        "文档给出的第二条路是下载正常 QT 版本的 Telegram。QT 版一般会跟随系统代理，适合不想在应用内长期维护一份代理填写的人。FAQ 中写明见 Telegram 官方网站 telegram.org。商店版与 QT 版不要当成同一个进程来回切换排查，以免分不清到底是哪一份在联网。",
+        "若应用内已经填写 7897 仍失败，再核对端口是否被改过、系统代理是否因权限没有写成功、本机安全软件是否让整个 Clash 无法启动。公司电脑安装了禁止软件安装服务的安全软件时，表现是闪退或无法启动，属于全局问题。每次重启登录都提示 osascript 想要进行更改，是登录项中的服务被禁用，到登录选项中打开即可。Sonoma 菜单栏图标重叠是系统缺陷，调整显示器分辨率再调回去。把这些条目从 Telegram 问题上剥离开，才能按文档用应用内填端口或改用 QT 版收尾，而不是误判 TUN 没开。",
+        "资料：\nhttps://www.clashverge.dev/faq/macos.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

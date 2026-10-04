@@ -1,0 +1,57 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：开 TUN 后系统 DNS 变成 223.6.6.6 要不要改回去",
+  "description": "Clash Verge Rev 电脑端（macOS）：开 TUN 后系统 DNS 变成 223.6.6.6 要不要改回去。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e5883fcf48c1",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev macOS TUN 系统 DNS 223.6.6.6",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "系统 DNS 被改成 223.6.6.6 是预期行为",
+      "paragraphs": [
+        "Clash Verge Rev 在 macOS 打开 TUN 后，系统 DNS 变成 223.6.6.6。FAQ 给出的原因是：TUN 无法劫持 macOS 发往局域网的 DNS 请求。查询如果仍指向路由器或内网 DNS，这些包不会进入核心，TUN 下的域名处理就不完整。",
+        "客户端因此在启动 TUN 时把系统 DNS 改成 223.6.6.6，关闭 TUN 即恢复原来的系统 DNS。FAQ 明确：TUN 下 DNS 由 Mihomo 核心代理，这个 DNS 并没有其它意义。它不是分流名单，也不代表国内解析策略。",
+        "判断依据：仅在 TUN 开启期间看到 223.6.6.6；关闭 TUN 后应回到原来的宽带或路由器 DNS。关闭后仍停在该地址，再查是否有其他软件改写网络配置。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "TUN 开着时不要改回局域网 DNS",
+      "paragraphs": [
+        "TUN 工作期间不要把系统 DNS 手工改回路由器地址。改回去等于把查询送回劫持不到的局域网路径，和 FAQ 要避免的问题相同。真正的解析和规则匹配都在 Mihomo DNS 模块里完成，系统设置里的 223.6.6.6 只是把查询从局域网 DNS 上拉开。",
+        "步骤：确认当前是 TUN 而不是仅系统代理；允许客户端改写系统 DNS；需要停用时关闭 TUN，等待恢复；再核对内网域名和公网域名在关闭后是否按系统原 DNS 工作。",
+        "判断“不用改回去”的依据：TUN 开启时应用按核心规则访问；关闭 TUN 后系统 DNS 自动恢复。不要用系统里是不是运营商 DNS 来判断分流对不对。公司电脑若有安全软件锁定 DNS，属于权限问题，应放行客户端，而不是反复手改。",
+        "若在系统设置里看到 223.6.6.6 就怀疑写错配置，先对照 FAQ：该写入随 TUN 启停，本身不做分流。分流结果应到核心日志或规则匹配里核对。局域网打印机、NAS 的名字解析若在 TUN 开启时失败，优先在核心 dns 里为内网域名写直连解析，而不是把系统 DNS 改回路由器。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "内核在 Windows 和 macOS 都不能劫持局域网 DNS",
+      "paragraphs": [
+        "tun 文档对 dns-hijack 的限制是：在 MacOS / Windows 无法自动劫持发往局域网的 dns 请求。这与 FAQ 是同一限制。把系统 DNS 指到 223.6.6.6，是为了让查询离开局域网 DNS，并不能让 dns-hijack 开始抓局域网 53 端口。",
+        "因此：发往路由器或内网 IP 的 DNS，在 Windows 和 macOS 都不会被自动导入内部 DNS 模块。Android 开启私人 DNS 时也无法自动劫持，那是另一条说明，不要用安卓私人 DNS 的经验套 macOS。",
+        "排障顺序：看 TUN 是否开启 → 看开启期间系统 DNS 是否为 223.6.6.6 → 保持不改回局域网 DNS → 在 Mihomo 的 dns 配置里处理域名。只有关闭 TUN 后系统 DNS 不恢复，才去系统网络设置或安全软件。Windows 上同样不要指望 dns-hijack 自动抓局域网 DNS，需要时也应让查询进入核心 DNS，而不是只加 hijack 列表。",
+        "参考资料：\nhttps://www.clashverge.dev/faq/macos.html\nhttps://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

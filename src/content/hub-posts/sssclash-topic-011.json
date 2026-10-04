@@ -1,0 +1,64 @@
+{
+  "title": "Clash GEOIP 的 no-resolve 参数有什么作用",
+  "description": "Clash GEOIP 的 no-resolve 参数有什么作用。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-011",
+  "category": "配置教程",
+  "tags": [
+    "Clash GEOIP no-resolve",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "GEOIP 属于目标 IP 类路由规则：它比较的是目的地址所属国家代码，而不是域名字符串。请求在规则链里仍以域名形式出现时，一旦匹配过程走到 GEOIP、IP-CIDR 这类规则，mihomo 会先做 DNS 解析，再用解析得到的 IP 判断是否命中。no-resolve 写在这类规则的最后一项，用来跳过“为了检查本条规则而发起的解析”。它既不会改写从上到下的优先级，也不会让 GEOIP 去匹配 GEOSITE 那种域名库。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "和规则链、解析时机的关系",
+      "paragraphs": [
+        "规则按列表顺序匹配，写在上面的优先。资料中的目标 IP 类包括 IP-CIDR、IP-CIDR6、IP-SUFFIX、IP-ASN、GEOIP 等；DOMAIN、DOMAIN-SUFFIX、GEOSITE 等则直接看域名。no-resolve 的适用范围被明确限定为关于目标 IP 的规则。",
+        "配置时把附加参数放在出站名称之后，例如：",
+        "```\nrules:\n  - DOMAIN-SUFFIX,google.com,auto\n  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve\n  - GEOIP,CN,DIRECT\n  - MATCH,auto\n```",
+        "必须同时记住另一句限制：如果更早的匹配已经触发过 DNS 解析，后面即使写了 no-resolve，仍会用已有 IP 继续匹配。因此该参数不能当作“禁止本连接出现任何 IP 信息”，只能当作“本条规则不要主动去解析”。",
+        "同页还有附加参数 src，同样只支持目标 IP 规则，作用是把目标 IP 匹配转成来源 IP 匹配。SRC-GEOIP 则是直接按来源 IP 国家代码匹配。二者与 no-resolve 不是同一开关，不能互相替代。",
+        "若请求是 UDP，而当前命中的代理节点没有 UDP 支持，匹配会继续向下。这种“出站能力不足导致跳过”和“GEOIP 因 no-resolve 没有 IP 可用”在表面上都像规则没生效，排查时要拆开。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "针对域名请求的检查步骤",
+      "paragraphs": [
+        "1. 确认准备加 no-resolve 的那一行类型是 GEOIP 或 IP-CIDR、IP-CIDR6、IP-SUFFIX、IP-ASN，而不是 DOMAIN、GEOSITE、PROCESS-NAME、DST-PORT 等。\n2. 从该行向上检查：是否已有未带 no-resolve 的目标 IP 规则。有，则域名可能已被解析，后续 no-resolve 挡不住“用现成 IP 再比一次”。\n3. 分清两种目的。只想让内网 CIDR 不要为了匹配去解析公网域名：给这些 CIDR 加 no-resolve，国家分流用的 GEOIP 放在后面且不要加该参数。想让某条 GEOIP 自己也不触发解析：给该条加上，并接受“从未解析的纯域名不会命中这条 GEOIP”。\n4. 核对 MATCH 兜底是否存在；若使用 AND、OR、NOT、RULE-SET、SUB-RULE，确认括号与子规则名正确，流量确实会走到含该 GEOIP 的那一段。\n5. 对 UDP，先确认拟使用的出站是否具备 UDP 能力，再判断是国家规则问题还是出站跳过问题。",
+        "判断依据：连接目标已经是 IP 时，GEOIP 仍按国家代码工作，与有没有 no-resolve 无关；连接目标还是域名、且此前从未解析时，带 no-resolve 的 GEOIP 不应仅为命中自己去解析。若日志或实际出站显示仍按国家分流，优先怀疑更早规则已经解析，而不是参数拼写单独失效。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "未按预期命中时的下一步",
+      "paragraphs": [
+        "先做单变量对比：只去掉 GEOIP 上的 no-resolve。去掉后立刻按国家命中，说明先前缺少可供比较的目标 IP。去掉后仍不命中，转向顺序、上方域名规则是否已接管、国家代码是否写成 CN 这类文档使用的代码，以及 MATCH 出站是否把流量收走。",
+        "若设计是“前面若干 IP-CIDR 跳过解析、最后一条 GEOIP 负责解析”，则只给 CIDR 写 no-resolve。两条都加时，从未解析的域名可能一直落到 MATCH。",
+        "怀疑带 no-resolve 的 IP-CIDR 不该命中却命中了：查更早规则是否已解析。文档允许在已有解析结果时，仍匹配这些目标 IP 规则。",
+        "逻辑规则要注意括号；SUB-RULE 必须指向已定义的子规则。这类错误会让请求根本到不了 GEOIP，不要继续叠加附加参数。",
+        "https://wiki.metacubex.one/config/rules/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

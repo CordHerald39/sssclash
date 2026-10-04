@@ -1,0 +1,58 @@
+{
+  "title": "Clash rule-providers 的 behavior 和 format 怎么匹配",
+  "description": "Clash rule-providers 的 behavior 和 format 怎么匹配。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-005",
+  "category": "配置教程",
+  "tags": [
+    "Clash rule-providers",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "rule-providers 要能用，behavior 与 format 必须和文件实际内容一致。适用条件是你已经决定用 http、file 或 inline 提供规则集，并会在路由规则里引用该名称。两者不匹配时，常见现象是集合加载失败或规则根本不命中，而不是策略组选错。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "三个 behavior 对应三种内容",
+      "paragraphs": [
+        "behavior 可选 domain、ipcidr、classical，需要按规则文件的实际格式填写。domain 表示内容按域名集合理解，ipcidr 按网段集合理解，classical 则按一条条传统规则理解。名称必须唯一。类型为 http 时需要 url，file 读本地文件，inline 使用 payload。payload 示例是 DOMAIN-SUFFIX,google.com 这种 classical 写法，因此若 behavior 写成 domain，却在 payload 里放带类型前缀的规则，属于自相矛盾。判断依据：打开文件先看每一行是纯域名、纯 CIDR，还是带规则类型的完整行，再回填 behavior。",
+        "操作步骤：确定集合要匹配域名、IP 还是混合规则；选定 behavior；用少量行写成最小文件或 inline payload；在路由规则里引用同一名称。若完全不命中，下一步先看 behavior 是否与行格式一致，而不是加长列表。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "format 与 mrs 的限制",
+      "paragraphs": [
+        "format 可选 yaml、text、mrs，默认 yaml。yaml 与 text 都要能被对应 behavior 解释。mrs 是转换后的规则集格式，目前 behavior 仅支持 domain 与 ipcidr。文档给出的转换方式是使用 convert-ruleset，在 domain 或 ipcidr 与 yaml 或 text 之间指定源文件和目标 mrs。classical 内容不能只改后缀就当成 mrs。path-in-bundle 用于本地文件不存在时，从 BundleMRS.7z 按给定路径解压，同样要求你清楚该文件是 domain 还是 ipcidr。判断依据：format 为 mrs 时，behavior 只能是 domain 或 ipcidr；format 为 yaml 且 behavior 为 classical 时，行内应能看到规则类型。",
+        "http 下载还可以设置 interval、proxy、size-limit、header。path 不填则使用 url 的摘要作为文件名，并且限制在工作目录内。这些项不改变 behavior 与 format 的匹配关系。不要把未经转换的 classical yaml 直接改成 mrs。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "不匹配时如何检查和收束",
+      "paragraphs": [
+        "具体检查：对照 type、behavior、format、path 或 payload；http 类型确认拉到的正文与声明一致；inline 只在 type 为 inline 时采用 payload。路由规则引用该集合前，集合必须已按声明解析。若 behavior 为 classical，行内应是可识别的规则类型；若 behavior 为 domain 或 ipcidr，行内就不应再夹带另一类内容。",
+        "失败后的下一步：加载报错时，先把 format 改回与源文件一致的 yaml 或 text，并把 behavior 改成与行内容一致的值。需要 mrs 时用文档中的转换命令生成，而不是只改文件名。路径报不在安全范围时，把文件放到工作目录，或按操作系统的路径分隔规则配置安全路径。size-limit 过小会导致下载被截断，表现为格式无法识别，应先取消限制再判断 behavior。名称重复会使集合无法按预期引用，需检查是否与其他规则集合重名。",
+        "https://wiki.metacubex.one/config/rule-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

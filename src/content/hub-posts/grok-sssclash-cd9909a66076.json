@@ -1,0 +1,59 @@
+{
+  "title": "Clash DNS 打开 respect-rules 后，为什么还要单独配 proxy-server-nameserver",
+  "description": "Clash DNS 打开 respect-rules 后，为什么还要单独配 proxy-server-nameserver。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-cd9909a66076",
+  "category": "配置教程",
+  "tags": [
+    "Clash DNS respect-rules proxy-server-nameserver 鸡蛋问题",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "respect-rules 怎样制造解析循环",
+      "paragraphs": [
+        "`respect-rules` 打开后，DNS 连接也要遵守路由规则。文档写明：dns 连接遵守路由规则，需配置 proxy-server-nameserver，并强烈不建议和 prefer-h3 一起使用。",
+        "典型场景是节点地址写成域名。规则要求访问该域名走代理；建立代理又必须先解析这个域名。解析连接若同样匹配“走代理”，就会变成：先解析才能连代理，解析却又要先有代理。文档在附加参数里把经代理查询却未准备节点解析通道的情况称为鸡蛋问题。",
+        "用三条一起判断：`respect-rules` 为 true，或 DNS 地址带有 `#RULES`（文档写明 `#RULES` 等同于 respect-rules）；节点地址是域名；规则会把该域名指向代理。三者成立却没有独立的节点 DNS 通道时，常见表现是节点无法解析、代理组选不中、核心在启动阶段卡住。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "必须把节点域名交给 proxy-server-nameserver",
+      "paragraphs": [
+        "`proxy-server-nameserver` 只解析代理节点域名。文档写明：如果不填，则遵循 nameserver-policy、nameserver 和 fallback 的配置。respect-rules 让普通 DNS 连接走规则之后，这条退路会把节点解析重新送进循环，所以要单独写，而不是指望普通 DNS 字段顺便完成节点解析。",
+        "`proxy-server-nameserver-policy` 格式与 nameserver-policy 相同，仅用于节点域名，并且当且仅当 proxy-server-nameserver 不为空时生效。个别节点要指定解析器时再写 policy；主列表为空时，policy 不会单独生效。",
+        "```yaml\ndns:\n  enable: true\n  respect-rules: true\n  prefer-h3: false\n  proxy-server-nameserver:\n    - 223.5.5.5\n  proxy-server-nameserver-policy:\n    \"www.yournode.com\": 114.114.114.114\n```",
+        "`www.yournode.com` 来自文档示例，请改成自己的节点主机名。`prefer-h3` 保持 false。",
+        "判断配成功的依据：节点域名在代理握手前已经变成 IP；普通域名仍按规则做 DNS。若浏览恢复但节点仍是域名，说明写错字段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "遇到 #RULES 或误开 prefer-h3 时的步骤",
+      "paragraphs": [
+        "场景一：没有写 respect-rules，但某条 DNS 使用 `#RULES`。按文档它表示遵守路由规则连接，处理与打开 respect-rules 相同，必须补 proxy-server-nameserver。",
+        "场景二：respect-rules 与 prefer-h3 同时为 true。先关掉 prefer-h3，只保留 respect-rules 和 proxy-server-nameserver，确认节点解析后再考虑其他 DoH 选项。",
+        "场景三：只给直连域名写了策略。节点解析应全部放到 proxy-server-nameserver 及可选 policy。",
+        "固定步骤：确认 respect-rules 或 `#RULES` 存在 → 填写 proxy-server-nameserver → 需要时再写 proxy-server-nameserver-policy → 关闭 prefer-h3 → 重载后检查节点域名是否已解析。不要在循环出现时去改路由规则的匹配顺序来绕过节点解析，那不是这个开关的用法。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/en/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

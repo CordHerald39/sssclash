@@ -1,0 +1,58 @@
+{
+  "title": "从 Mihomo Party 更新到 Clash Party，先核对哪些发行信息",
+  "description": "从 Mihomo Party 更新到 Clash Party，先核对哪些发行信息。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-022",
+  "category": "操作教程",
+  "tags": [
+    "Clash Party Mihomo Party",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "从 Mihomo Party 更新到 Clash Party，先要核对的是发行通道、内置内核名单、覆写与备份范围，而不是先覆盖可执行文件。当前仓库把项目说明为 Another Mihomo GUI，特性里同时写了内置 Smart 内核与 Mihomo（Clash Meta）内核、一键 Smart Core 规则覆写、无需服务模式的 Tun、WebDAV 备份恢复、任意修订配置的覆写，以及深度集成 Sub-Store。这些条目决定「你更新的是图形界面、内核，还是规则决策方式」。名称相近不等于配置文件可以原样承接，核对顺序应当是发行信息、内核与覆写、备份能否覆盖订阅工作流。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "核对仓库身份与发布附件",
+      "paragraphs": [
+        "安装包只从仓库发布页取，避免把其它组织的同名客户端当成迁移目标。核对项包括：组织与仓库名是否为 mihomo-party-org/clash-party；最新 tag 与当前版本的差异说明是否写清改动面；附件是否覆盖你正在使用的操作系统与架构。判断依据是能对应到明确的 tag 和附件，而不是只看到预览图或特性勾选。",
+        "若本机仍有旧名称的快捷方式、便携目录或开机启动项，把路径抄下来，但先不要删。发行信息核对完成前，旧目录是唯一可靠的回退介质。若发布说明只强调主题或 UI，而你依赖的是覆写与订阅结构，应把本次更新视为高风险，而不是常规小版本。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "核对内核、Smart Core、覆写与备份范围",
+      "paragraphs": [
+        "Clash Party 同时内置 Smart 内核与 Mihomo 内核，并提供 Smart Core 规则覆写。更新前写清三件事：当前实际在跑哪一种内核；是否已经对配置文件做过覆写；覆写改的是规则、DNS 还是策略组。判断依据：若现网依赖人工维护的规则与策略组，更新后立即打开 Smart Core 一键覆写，会改变节点选择路径，这与「只升级 GUI」不是同一目标。应先保持原内核与原覆写，确认连通后再决定是否启用 Smart Core。",
+        "WebDAV 一键备份被单独列出，更新前要确认备份目标可写，且内容至少包含配置文件与覆写，而不是只备份主题。Sub-Store 深度集成意味着订阅可能不在单一 YAML 里。核对发行信息时列出订阅由 Sub-Store 管理还是由外部链接导入，避免恢复界面后订阅源是空的。Tun「无需服务模式」只是能力声明，更新前记录是否正在使用 Tun、更新后是否仍需要同等入站方式即可，不要把它理解成对延迟或稳定性的保证。支持「大部分 Mihomo 常用配置修改」说明仍可能有字段不被界面暴露，关键项应在覆写里保留文本，而不是假设界面开关能覆盖全部内核语法。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "核对失败或更新失败后的下一步",
+      "paragraphs": [
+        "发布页找不到当前系统对应附件时，停止更新，保持旧客户端，不要用名称相近的其它仓库包替换。更新后配置文件能打开但策略行为明显变化时，优先关闭 Smart Core 规则覆写，回退到更新前的覆写副本，再单独验证 Mihomo 内核能否加载原配置。订阅列表空白时，先检查 Sub-Store 相关数据是否随备份恢复；确需对照参数时只保留类似 token=示例 的片段，在本地用旧备份补全，不要手写完整订阅地址。WebDAV 恢复失败则改用更新前复制的本地目录：先恢复配置文件与覆写，最后再恢复主题。若 Tun 入站与更新前不一致，先关掉 Smart Core 与主题类改动，只比较入站相关覆写是否被替换。",
+        "发行与特性以 https://github.com/mihomo-party-org/clash-party 为准。",
+        "资料：https://github.com/mihomo-party-org/clash-party"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

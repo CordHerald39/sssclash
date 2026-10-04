@@ -1,0 +1,62 @@
+{
+  "title": "Clash Party 电脑端（Windows）：改名后开机启动失效、提示找不到 Mihomo Party.exe 怎么处理",
+  "description": "Clash Party 电脑端（Windows）：改名后开机启动失效、提示找不到 Mihomo Party.exe 怎么处理。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-4898f005495b",
+  "category": "故障排查",
+  "tags": [
+    "Clash Party 开机启动 改名",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Windows 上产品名在 Mihomo Party 与 Clash Party 之间改过之后，常见情况是开机启动失效，并提示找不到 `Mihomo Party.exe`。根因通常不是开机启动功能被删掉，而是计划任务和快捷方式还指向旧文件名，安装目录里的可执行文件已经换名。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "开机启动实际写进了哪里",
+      "paragraphs": [
+        "仓库里的实现把任务名写死为 `mihomo-party`。Windows 上会生成一份计划任务：登录触发，延迟 `PT3S`，运行级别 `HighestAvailable`，动作是执行 `mihomo-party-run.exe`，参数才是当前的 `exePath()`。检查是否已启用时，调用 `schtasks.exe /query /tn \"mihomo-party\"`，输出里包含该名称才算开着。",
+        "判断依据不要看桌面图标还在不在，而要看：",
+        "- 任务计划程序里是否还有名为 `mihomo-party` 的任务。\n- 任务「操作」里的参数指向的主程序是否还存在。\n- 开始菜单或旧快捷方式是否仍写着 `Mihomo Party.exe`，而安装目录已经是新名字。",
+        "产品名改掉后，旧快捷方式不会自动改路径。升级前创建的任务，参数也可能仍是旧 exe。登录时系统按旧路径去跑，就会提示找不到文件。任务名本身一直是 `mihomo-party`，和窗口标题、产品名不是同一件事，不要只凭界面上的新名字判断任务已经更新。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用新的可执行文件重建任务",
+      "paragraphs": [
+        "按这个顺序处理：",
+        "1. 不要再双击旧快捷方式。到安装目录确认当前真实文件名，只用新的可执行文件启动。\n2. 以管理员身份运行这份新 exe。创建任务需要调用 `schtasks.exe /create`，权限不够时任务写不进去，或写完也无法按 `HighestAvailable` 拉起。\n3. 到设置里把开机启动关掉，再打开一次。关闭对应 `schtasks.exe /delete /tn \"mihomo-party\" /f`，打开会重写 XML 并用 `/f` 覆盖。这一步的目的是让任务参数变成现在的 `exePath()`，而不是手工去猜旧文件名。\n4. 再查询一次任务，确认名称仍在，且操作参数已经是新路径。",
+        "不要只删快捷方式却不重建任务，否则图标没了，登录触发仍指向旧文件。也不要手工改一份过期 XML 却保留旧 `Arguments`，辅助启动器 `mihomo-party-run.exe` 和主程序路径必须成对存在。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改完以后怎么验收",
+      "paragraphs": [
+        "验收看这几条，而不是看「感觉有没有随系统起来」：",
+        "- 注销或重启后，进程路径是新 exe，系统不再去找 `Mihomo Party.exe`。\n- `schtasks` 查询成功，任务名匹配 `mihomo-party`。\n- 任务里 `Command` 指向 `mihomo-party-run.exe`，`Arguments` 指向主程序；两者任一指向已删除文件都会失败。\n- 登录后大约数秒才拉起是触发器里写了延迟，单独这一条不能当成损坏。",
+        "若任务在、参数也对，仍不启动，再查安全软件是否拦截了计划任务，而不是继续改产品名。同一份代码在 Linux 写的是 `~/.config/autostart` 下的桌面文件，在 macOS 写的是登录项，和这次 Windows 改名找不到 exe 不是同一条路径，不要混着改。",
+        "https://github.com/mihomo-party-org/clash-party/blob/main/src/main/sys/autoRun.ts\nhttps://github.com/mihomo-party-org/clash-party/releases/tag/v1.5.6\nhttps://github.com/mihomo-party-org/clash-party/releases/tag/v1.8.6"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

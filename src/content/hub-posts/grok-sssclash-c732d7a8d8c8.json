@@ -1,0 +1,65 @@
+{
+  "title": "FlClash 电脑端（Linux）：KDE 下打开 TUN 立刻失败、网卡变 NO-CARRIER 怎么放行",
+  "description": "FlClash 电脑端（Linux）：KDE 下打开 TUN 立刻失败、网卡变 NO-CARRIER 怎么放行。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-c732d7a8d8c8",
+  "category": "故障排查",
+  "tags": [
+    "FlClash Linux TUN NetworkManager",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "troubleshooting",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在 KDE（通常配合 NetworkManager）的 Linux 电脑上，FlClash 一开 TUN 就失败，系统里多出一块名为 FlClash 的虚拟网卡，状态还变成 NO-CARRIER。这往往不是「内核没权限」那么笼统。NetworkManager 会把新出现的 TUN 当成普通网卡接管，占住文件描述符、尝试自动配置；mihomo 侧的 TUN 入站拿不到对接口的控制，设备就会停在无载波。处理顺序是：先让 NetworkManager 不要管理这块网卡，再开 TUN，最后才谈防火墙和协议栈。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先确认失败形态是不是被桌面网络栈抢走",
+      "paragraphs": [
+        "FlClash 支持 Linux 上的系统代理与 TUN。TUN 入站由内核文档中的 `tun` 段描述：`enable`、`device`（网卡名）、`stack`、`auto-route`、`auto-redirect`（仅 Linux）等。`device` 一旦指定成固定名称（本场景即 FlClash），桌面环境就能稳定地「看见」同名接口，也就稳定地去接管它。",
+        "判断依据：",
+        "- 关闭 TUN 时代理或系统代理仍可用，一开 TUN 立刻失败：问题在 TUN 设备生命周期，而不是订阅。\n- `ip link` 能看到 FlClash，但 NO-CARRIER、无预期地址：接口被创建后没有按内核的方式起来，优先怀疑被 NetworkManager 管理。\n- 同一台机器用命令行临时停掉 NetworkManager 后 TUN 能起来（仅用于对比，不建议长期关 NM）：更支持「被接管」而不是配置 YAML 写错。",
+        "Linux 上若开了防火墙，文档说明 `system` 与 `mixed` 栈可能不可用，需要放行内核出站。那是下一步；若接口已经 NO-CARRIER，先不要在栈类型之间反复切换。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把 FlClash 网卡标成 unmanaged 再开 TUN",
+      "paragraphs": [
+        "目标：NetworkManager 忽略名为 FlClash 的接口，不自动 DHCP、不占 fd。可在 NetworkManager 的 conf.d 里用 keyfile 声明（文件名可自定）：",
+        "```ini\n[keyfile]\nunmanaged-devices=interface-name:FlClash\n```",
+        "步骤：",
+        "1. 完全关闭 FlClash 的 TUN（必要时先退出应用），确认没有残留的 FlClash 接口，或先记下它的 NO-CARRIER 状态以便对比。\n2. 写入上述 unmanaged 配置后，重新加载 NetworkManager（例如 `nmcli general reload`，或按发行版重启 NetworkManager 服务）。\n3. 用 `nmcli device` 查看：FlClash 若仍出现，应显示 unmanaged，而不是 connected/connecting。\n4. 再在 FlClash 中启用 TUN。成功时接口不应再被 NM 改写成无载波的自动连接。\n5. 若 YAML 里设置了 `device`，保持与 unmanaged 规则里的 `interface-name` 一致。名称对不上，NM 仍会接管实际创建出来的那块卡。",
+        "KDE 的「网络」设置若把 FlClash 当成普通有线设备去编辑，等于继续管理它；标成 unmanaged 后，不要再在图形界面里给它配 IPv4。`auto-route`、`auto-redirect` 由内核自己配路由和 iptables/nftables 重定向，与 NM 抢同一张卡时最容易失败。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "接口起来之后再放行流量和选择协议栈",
+      "paragraphs": [
+        "设备能起来，TUN 仍可能被防火墙挡住。文档对 Linux 的示例是放行 TUN 网卡出站（示例网卡名为 Mihomo，本场景应换成你的实际名称 FlClash）：",
+        "```bash\nsudo iptables -A OUTPUT -o FlClash -j ACCEPT\n```",
+        "使用 nftables 的发行版按同样方向写 output 链，对象仍是这块 TUN 网卡。文档还说明：若打开了防火墙，则无法使用 `system` 和 `mixed` 栈；无使用问题时建议 `mips`。不要在接口仍被 NM 占用时靠换栈「试运气」。",
+        "Linux 托盘依赖与 `.deb` / AppImage 包装是另一件事：托盘图标缺库不会单独把网卡打成 NO-CARRIER。把现象限定在「开 TUN、出现 FlClash、NO-CARRIER」，按 unmanaged → 再启用 → 再放行 处理。`auto-detect-interface` 多网卡时建议再核对出口网卡，以免路由起来后走错物理口。",
+        "资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://github.com/chen08209/FlClash/blob/main/README_zh_CN.md"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

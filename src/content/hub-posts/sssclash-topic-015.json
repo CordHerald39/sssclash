@@ -1,0 +1,64 @@
+{
+  "title": "Clash 更新配置后怎样保留代理组选择",
+  "description": "Clash 更新配置后怎样保留代理组选择。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-015",
+  "category": "配置教程",
+  "tags": [
+    "Clash persist-selection",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "策略组里当前选用哪一个出站，属于运行时状态，并不自动写回规则文件。配置被重新加载或进程再次启动后，若没有把“API 对策略组的选择”存下来，选中项会回到配置里的默认值。全局配置里的 profile.store-selected 专门做这件事。要保留的是经 RESTful API 改过的组选择，而不是订阅文本里某一行的历史副本，也不是运行模式 mode 本身。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "缓存开关和 API、运行模式的关系",
+      "paragraphs": [
+        "资料在缓存一节给出：",
+        "```\nprofile:\n  store-selected: true\n  store-fake-ip: true\n```",
+        "store-selected 的说明是：储存 API 对策略组的选择，以供下次启动时使用。也就是说，先要有一次通过 API 发生的选择（外部控制器上的面板、external-ui 下的静态界面、或直接调用 API），内核才会把该选择存起来，供下次启动读取。",
+        "store-fake-ip 储存 fakeip 映射表，让域名再次发生连接时使用原有映射地址。它与组选择不是同一个开关。更新配置后若只是策略组选中项丢失，应查 store-selected，不要把 fakeip 缓存关掉当排障手段。",
+        "mode 仍是独立项，可选 rule、global、direct，默认为规则模式。global 还需要在 GLOBAL 策略组里选择代理或策略。store-selected 不会把 mode 改成 global，也不会在规则文件被换成另一套组名后凭空创造同名组。",
+        "外部控制接口（external-controller 与 secret 等）是写入选择的通道。界面路径 external-ui 只是把静态资源挂在 API 的 /ui。没有可用的 API，就没有“API 对策略组的选择”可供储存。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "更新或重启前要核对的条件",
+      "paragraphs": [
+        "1. 确认 profile.store-selected 为 true。未写或为 false 时，下次启动不应期待上次点选还在。\n2. 确认当时的选择确实来自 API，而不是只在 YAML 里改了组内节点顺序或默认出站。后者不属于该缓存字段的职责。\n3. 对比更新前后策略组名称是否一致。持久化按组恢复，订阅把组名改掉或拆组后，旧记录对不上新组。\n4. 确认内核工作目录可写，缓存文件没有在更新脚本里被一并删除或换到新目录。读不到存储时，表现与未开启 store-selected 相同。\n5. 若使用 mode: global，更新后检查 GLOBAL 组是否仍存在。组消失则谈不上恢复选中项。\n6. 排除无关项：unified-delay、tcp-concurrent、geo-auto-update 等不负责保存策略组选择。",
+        "判断依据：组名未变、先前经 API 选中的出站在启动后仍被选中，说明 store-selected 按文档工作。组名已变、或从未通过 API 选择过，则丢失是预期，需要重新选择并继续保持该开关为 true。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "更新后选择被重置时的下一步",
+      "paragraphs": [
+        "订阅更新后回到默认出站：先看新配置里的策略组名字。名字变了，只能再次通过 API 选择，并保持 store-selected 开启，以便下一次启动保存新的选择。不要指望缓存去猜测改名后的对应关系。",
+        "开关已是 true 仍然丢失：确认重启的是同一工作目录下的同一内核、更新过程没有清空 profile 存储、以及更新后 external-controller 仍可访问。之后若无法再调 API，新的选择也写不进去。",
+        "只想保留组选择、不想保留 fakeip 映射：单独保留 store-selected，不要两个缓存项绑在一起开关。排障时一次只改一个字段，才能分清是组选择丢失还是域名映射变化。",
+        "发现 mode 变成 rule：这是运行模式配置被覆盖或未写入 global，不是 store-selected 失效。需要全局代理时在配置中设置 mode: global，并在 GLOBAL 组里完成选择。",
+        "https://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

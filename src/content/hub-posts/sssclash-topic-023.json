@@ -1,0 +1,57 @@
+{
+  "title": "Clash log-level 如何设置，排查完成后怎样恢复",
+  "description": "Clash log-level 如何设置，排查完成后怎样恢复。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-023",
+  "category": "故障排查",
+  "tags": [
+    "Clash log-level",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash 的 log-level 写在全局配置中，只控制内核输出到控制台和控制页面的日志等级，不改变运行模式，也不修改入站、出站或 DNS。排查时把它调高，是为了让错误和过程信息出现在同一通道；排查结束必须改回，否则 debug 会持续输出尽可能多的运行信息，后续很难从中筛出新问题。该项与 mode、allow-lan、external-controller 等并列，因此设置日志时不要顺手改其它全局键，否则无法判断到底是日志级别生效，还是监听或模式被改写。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "用等级判断该看什么、不该看什么",
+      "paragraphs": [
+        "资料给出的取值是 silent、error、warning、info、debug。silent 不输出。error 只输出发生错误至无法使用的日志。warning 包含不影响运行的错误，以及 error 级别内容。info 输出一般运行内容，以及 error 与 warning。debug 尽可能输出运行中所有信息。示例写法是 log-level 后接 info。",
+        "判断依据如下。控制台完全没有条目时，先检查是否写成 silent，而不是先改规则。已经出现无法继续使用的错误、但仍缺少上下文时，从 error 升到 warning 或 info 通常就能看到并列的告警。只有需要追踪加载与匹配过程时才用 debug。log-level 不会把 mode 从 rule 改成 global 或 direct，也不会改变 bind-address、authentication、find-process-mode 或 TCP Keep Alive。把日志调高却去改端口或鉴权，属于排查范围漂移。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按场景设置，并规定何时停止加级",
+      "paragraphs": [
+        "场景：配置加载失败、代理端口无响应，或外部控制 API 连不上。在全局配置把 log-level 设为 debug，其余项保持原值，然后重启内核，只从控制台或控制页面读新日志。先找 error，再看紧挨着的 warning。若日志指向绑定地址、鉴权、external-controller 或运行模式，回到对应全局项修改，不要继续堆日志等级。判断已经足够的标准是：能指出失败发生在加载配置、匹配过程还是出站连接，而不是日志行数变多。",
+        "场景：业务能用但偶发失败。先用 warning 观察是否有不影响运行的错误；没有再升到 info；仍不足以定位时才用 debug，并限制在可复现的短窗口。修改时只动 log-level 一行。不要顺便改 keep-alive-interval、unified-delay、tcp-concurrent 或 profile 下的存储项。若升到 debug 后仍没有任何输出，问题可能在「仅在控制台和控制页面输出」这一通道：去看你实际打开的是不是内核控制台或控制页面，而不是把等级再写一遍。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "排查完成后怎样恢复",
+      "paragraphs": [
+        "恢复目标是回到排查前的等级，而不是留在「看起来信息最多」的 debug。若原来没有写 log-level，示例值为 info，应写回 info，不必改成 silent，除非你明确需要静默。若原来是 warning 或 error，按记录写回。恢复步骤：改回 log-level；重启内核；在控制台或控制页面确认不再出现 debug 级别的逐条过程信息；再用同一复现操作看故障是否仍在。若故障消失只是因为重启、其它全局项并未改动，把结论记成重启效应，避免把 debug 当成修复手段。若恢复后完全没有日志，检查是否误写成 silent。需要对照全局项说明时，见 https://wiki.metacubex.one/config/general/ 。",
+        "资料：https://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

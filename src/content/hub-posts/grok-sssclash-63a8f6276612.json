@@ -1,0 +1,62 @@
+{
+  "title": "Clash Party 电脑端：Smart 内核和 Mihomo 内核怎么分工，TUN 还要不要装服务模式",
+  "description": "Clash Party 电脑端：Smart 内核和 Mihomo 内核怎么分工，TUN 还要不要装服务模式。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-63a8f6276612",
+  "category": "版本对比",
+  "tags": [
+    "Clash Party Smart 内核 Mihomo 内核 TUN 服务模式",
+    "版本对比",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Party 桌面端把两个内核和 TUN 权限模型写进了仓库说明，和单独跑 Mihomo 核心时的体验并不相同。选内核、决定要不要再装特权服务之前，先对照发行页和官方 TUN 文档，而不是假设“开了 TUN 就一定要服务模式”。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "内置 Smart 与 Mihomo 怎么分工",
+      "paragraphs": [
+        "仓库特性列表写明：内置 Smart 内核与 Mihomo（Clash Meta）内核。Mihomo 内核对应通用 Clash Meta 配置，以及大多数常用配置修改；Smart 内核则配合 **一键 Smart Core 规则覆写**，用于自动选节点。需要少调策略、让覆写去选节点时走 Smart 这条产品能力；需要贴近上游 Mihomo 行为、沿用已有 YAML 与规则时，切回 Mihomo 内核。",
+        "判断依据可以写得很具体：",
+        "- 目标是启用仓库所说的一键 Smart Core 规则覆写、让内核按覆写结果选节点 → 先切到 Smart 内核，再打开该覆写，不要只改界面主题却仍停在 Mihomo。\n- 目标是沿用现有 Mihomo 配置、规则集和进阶字段 → 使用 Mihomo 内核，不要把 Smart 覆写叠在手工策略上，以免两套逻辑同时改路由。",
+        "切换前先核对当前发行版里的内核切换项（以仓库发行页为准），确认正在运行的是哪一个核心，再谈 TUN。内核名称与实际进程不一致时，后面所有“要不要服务模式”的结论都会判错。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "TUN 在 Party 里默认不靠服务模式",
+      "paragraphs": [
+        "Clash Party 把开箱即用、**无需服务模式的 Tun** 列为特性。含义是：在该项目的桌面封装里，启用 TUN 不依赖再安装一套系统服务来抬权限。对只使用 Clash Party、并且其内置 TUN 已经能接管流量的用户，不必为了“TUN 必须装服务”再去装特权服务。",
+        "这不等于内核在任意系统状态下都能创建虚拟网卡。Mihomo 的 TUN 文档仍然指出：若打开了防火墙，则无法使用 `system` 和 `mixed` 协议栈，需要放行内核。Windows 路径为：设置 → Windows 安全中心 → 允许应用通过防火墙 → 选中内核。macOS 一般无需配置，防火墙默认放行签名软件；若开启防火墙后不可用，再到系统设置 → 网络 → 防火墙 → 选项中添加应用。Linux 一般不拦截应用，必要时对 TUN 网卡出站放行。",
+        "因此分工是：Party 负责“不强制服务模式”；防火墙、网卡权限、协议栈限制仍按 Mihomo TUN 文档处理。TUN 起不来时，先问防火墙有没有拦内核、当前 `stack` 是不是防火墙下不可用的 `system`/`mixed`，而不是先装服务。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "建议操作顺序与验收",
+      "paragraphs": [
+        "场景：新装 Clash Party，不确定用 Smart 还是 Mihomo，也不确定 TUN 要不要另装服务。",
+        "1. 打开仓库发行页，确认当前构建提供的内核切换入口，先看清正在用 Smart 还是 Mihomo。\n2. 若要自动选节点，打开一键 Smart Core 规则覆写并切到 Smart 内核；若配置来自标准 Mihomo YAML，切到 Mihomo 内核。\n3. 在 Party 内启用 TUN，先不安装额外服务模式组件，验证流量是否进入虚拟网卡。通过条件是：接口能起来，且流量按规则走向 TUN，而不是系统提示缺少服务。\n4. 若 TUN 起不来或协议栈不可用，按 Mihomo 文档放行内核、检查防火墙，必要时改用文档建议的 `mips` 栈（文档写明如无使用问题可建议该栈），而不是先装特权服务。\n5. 仅当当前封装无法创建 TUN、或系统策略明确要求独立特权进程时，再考虑另装特权服务。这是兜底，不是 Party 的默认路径。",
+        "验收：内核名称与发行页一致；Smart 覆写只在 Smart 内核下作为选节点手段；TUN 在无服务模式时能工作则保持现状；失败原因能对应到防火墙或权限，而不是“没装服务所以一定坏”。仓库同时还有主题、WebDAV 备份、覆写和 Sub-Store 等能力，与内核分工无关，不在此展开。",
+        "资料：\nhttps://github.com/mihomo-party-org/clash-party\nhttps://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "title": "FlClash 电脑端（macOS）：用 Homebrew 装和直接下 DMG 差在哪",
+  "description": "FlClash 电脑端（macOS）：用 Homebrew 装和直接下 DMG 差在哪。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-aa8edbfcd899",
+  "category": "操作教程",
+  "tags": [
+    "FlClash brew cask",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在 macOS 上给 FlClash 选安装方式，实质是选谁来分辨芯片包、以后怎么更新，而不是选两个功能不同的客户端。官方 README 同时提供 GitHub Releases、会按设备挑选文件的网站，以及 Homebrew 的 tap。macOS 要求 12 及更高版本，DMG 分为 Apple Silicon 与 Intel，并写明也可以用 Homebrew 安装。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "直接下 DMG 时要自己对架构",
+      "paragraphs": [
+        "FlClash 是基于 ClashMeta 的多平台代理客户端，桌面端提供 x64 与 ARM64 构建。走 DMG 时，需要在发布页选择与本机芯片一致的镜像：Apple Silicon 用对应包，Intel 用另一包。选错架构就无法按预期运行。README 也说明可通过网站下载，由页面按设备挑选文件，适合偶尔安装、不使用包管理器、愿意自己保存一份镜像的用户。判断依据是：你能明确说出本机是 Apple Silicon 还是 Intel；你接受以后升级再下一份新 DMG；你不打算把 FlClash 交给 brew 管理。满足这几条，DMG 路径更直观。",
+        "不要把 Linux 的 deb、rpm、AppImage，或 Windows 的安装包与便携 zip 拿来和 macOS 的 DMG 比哪种更完整，那些是其他平台的包格式。Android 的 APK 与 F-Droid 同样与 macOS 安装无关。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "Homebrew 适合不想挑芯片包、也要方便升级的人",
+      "paragraphs": [
+        "官方 README 给出的命令是先加入 tap，再安装 cask：",
+        "```bash\nbrew tap chen08209/tap\nbrew install --cask flclash\n```",
+        "先 `brew tap chen08209/tap`，再 `brew install --cask flclash`。本机架构由 Homebrew 对接 cask，减少自己在发布页对照文件名的步骤。后续升级也可以走 brew 的升级流程，而不必每次回到发布页。这适合已经在用 Homebrew、希望少动手选包、并把日常软件更新收口到同一套命令的用户。判断依据反过来问：终端里能否使用 brew；是否接受添加 `chen08209/tap`；是否经常分不清 ARM 与 Intel 的 DMG 名称。若尚未安装 Homebrew，仅为这一个应用引入包管理器，步骤并不更短，此时 DMG 仍然更直接。",
+        "两条命令的顺序不能反：缺少 tap 时，cask 名称可能解析不到。包名是 `--cask flclash`，不要自行改成其他公式名。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "功能不取决于安装渠道，边界要分开看",
+      "paragraphs": [
+        "README 列出的能力包括 mihomo（Clash.Meta）核心、规则分流、代理组、延迟测试、系统代理与 TUN、从订阅链接或文件导入、编辑器与覆写、连接与日志、备份恢复、桌面托盘与全局热键，以及开源无广告、GPL-3.0 许可。这些没有写成仅限 Homebrew 或仅限 DMG。因此不要用未在文档出现的性能或效果对比来选择安装器。从源码构建是另一条线，需要 Flutter、Go、Rust，macOS 上还需要 Xcode 与 Node.js，不能当成普通用户的第三种安装方式。",
+        "订阅导入示例在文档中是 `clash://install-config?url=` 后接编码后的链接，`clashmeta://` 与 `flclash://` 同样可用；不要在说明里编造完整网站地址，若需参数只保留 `token=` 这类片段。macOS 低于 12 不在表格列出的支持范围。装好之后，无论从应用程序文件夹启动还是由 cask 投放的位置启动，核心工作方式不随安装器改变。选 DMG 还是 brew，只回答谁负责挑芯片、谁负责下次更新即可。",
+        "资料：https://github.com/chen08209/FlClash"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

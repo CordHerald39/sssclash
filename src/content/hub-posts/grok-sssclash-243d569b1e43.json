@@ -1,0 +1,59 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：卸载重装前配置和订阅存在哪个目录",
+  "description": "Clash Verge Rev 电脑端（macOS）：卸载重装前配置和订阅存在哪个目录。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-243d569b1e43",
+  "category": "操作教程",
+  "tags": [
+    "Clash Verge Rev macOS 配置目录",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "卸载或重装 Clash Verge Rev 之前，先分清程序和数据。程序是应用程序文件夹里的 `.app`；订阅、主配置和工作目录在用户库的 Application Support 下。把订阅当成装在 `.app` 里，才会出现只替换应用却去备份整个 Applications，或清缓存时把工作目录一起删掉。下面按 macOS 文档列出的路径说明哪些能清、哪些会丢订阅。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "订阅文件在 Application Support 的 profiles",
+      "paragraphs": [
+        "文档中 macOS 的订阅（配置）文件目录是 `~/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/profiles/`，用途是存放订阅配置文件。配置（软件工作）目录是 `~/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/`。Clash Verge 配置文件是同目录下的 `verge.yaml`，说明为主配置文件。这些位置都不在 `/Applications` 的应用包内。因此只删除或替换 `.app`，profiles 通常还在；只有删除整个工作目录，才会把订阅一并带走。重装前若目标是保留已导入的订阅，应保护 Application Support 这一棵树，而不是去拷贝应用程序包里的资源文件。",
+        "判断很直接：重装程序后订阅还在，说明 profiles 没被删；订阅空了，应检查是否删除了工作目录，而不是怀疑 `.app` 内部被覆盖。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "清缓存不会带走订阅，删工作目录会",
+      "paragraphs": [
+        "WebView 缓存目录是 `~/Library/Caches/io.github.clash-verge-rev.clash-verge-rev`。文档对缓存的说明是强烈建议每次升级后清空此目录。缓存不承担订阅存储，清空后不应把订阅列表空了算到 Caches 头上。升级后若只是内嵌页面或界面异常，应先清这个缓存目录。",
+        "窗口状态文件是 `~/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/.window-state.json`，记录窗口状态信息。窗口大小、位置异常时，按说明删除该文件即可，同样不必碰 profiles。",
+        "把四类路径对照着看：Caches 是缓存；Application Support 根目录是工作目录；`verge.yaml` 是主配置；`profiles/` 才是订阅。清缓存影响 WebView；删窗口状态文件影响窗口记忆；删工作目录才会丢订阅和主配置。备份时应至少复制 `profiles/` 和 `verge.yaml`，不要只备份 Applications 里的 `.app`。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按重装目的选择要动的目录",
+      "paragraphs": [
+        "场景一，只重装程序、保留订阅：打开 `~/Library/Application Support/io.github.clash-verge-rev.clash-verge-rev/profiles/`，确认其中已有订阅配置文件，然后只处理应用程序，不要删除工作目录。场景二，升级后界面异常：清空 `~/Library/Caches/io.github.clash-verge-rev.clash-verge-rev`，保留 Application Support。场景三，窗口位置错乱：只删除 `.window-state.json`。场景四，确定连配置一起重置：再删除工作目录，并接受 profiles 与 verge.yaml 一起消失。",
+        "操作上可用访达的前往文件夹进入 Application Support 下该标识目录，先把 `profiles/` 和 `verge.yaml` 复制到备份位置，再卸载。不要以为订阅写在应用程序包内、会随新版安装包覆盖而丢失。系统级 TUN 服务和 PrivilegedHelper 位于 `/Library` 下，与用户目录订阅无对应关系：卸服务不会备份 profiles，删 profiles 也不会卸掉 helper。把程序、缓存、窗口状态、主配置、订阅目录五类分开处理，重装后才不会出现缓存清了订阅没了，或以为数据在 Applications 里的误操作。",
+        "资料：https://www.clashverge.dev/uninstall.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

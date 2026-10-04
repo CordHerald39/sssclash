@@ -1,0 +1,64 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：卸载后怎样清掉 TUN 服务和 PrivilegedHelper",
+  "description": "Clash Verge Rev 电脑端（macOS）：卸载后怎样清掉 TUN 服务和 PrivilegedHelper。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-409854dccdb7",
+  "category": "操作教程",
+  "tags": [
+    "Clash Verge Rev 卸载 TUN 服务",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在 macOS 上卸载 Clash Verge Rev，如果只把应用程序拖进废纸篓，TUN 使用的后台服务和特权助手往往还留在系统目录。下一次安装其他版本时，旧的 LaunchDaemon 与 PrivilegedHelper 可能和新安装抢同一标识。官方卸载说明把 macOS 删除 service 单独列出，并强调必须删除 tun 服务文件夹。下面按准备卸干净再装另一版给出步骤和判断依据。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "应用程序、守护进程和 helper 不在同一处",
+      "paragraphs": [
+        "前台程序通常是 `/Applications/Clash Verge.app`。服务名称是 `io.github.clash-verge-rev.clash-verge-rev.service`，对应的 plist 位于 `/Library/LaunchDaemons/io.github.clash-verge-rev.clash-verge-rev.service.plist`。特权助手则是 `/Library/PrivilegedHelperTools/io.github.clash-verge-rev.clash-verge-rev.service.bundle`。废纸篓只能拿走 `.app`，不会 stop 服务，也不会删除 bundle。文档的重要提示写明：完成停止与卸载步骤后，tun 服务将停止运行，并且在进程中将不再可见；为了确保后续安装其他版本时不会出现问题，请务必删除上述 tun 服务的文件夹。",
+        "判断残留的依据有两条同时看：进程列表里是否还能找到该 service；PrivilegedHelperTools 下是否还存在 `.service.bundle`。应用已经消失但这两处仍在，就属于没有卸完，此时直接安装新版本，正是说明里要避免的冲突来源。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "应用已经删掉时用 launchctl 清理",
+      "paragraphs": [
+        "文档方法 1 适合 `.app` 不在了、无法再点界面的情况。步骤 1，停止服务，在终端执行：",
+        "```\nsudo launchctl stop io.github.clash-verge-rev.clash-verge-rev.service\nsudo launchctl unload /Library/LaunchDaemons/io.github.clash-verge-rev.clash-verge-rev.service.plist\n```",
+        "步骤 2，删除 tun 服务的文件夹：",
+        "```\nsudo rm -rf /Library/PrivilegedHelperTools/io.github.clash-verge-rev.clash-verge-rev.service.bundle\n```",
+        "两条 stop/unload 与一条 rm 都需要管理员权限。若 unload 提示 plist 不存在，仍然要执行删除 bundle 的命令，因为后续安装冲突经常来自 PrivilegedHelperTools，而不是 LaunchDaemons 里是否还能看到 plist。清理后再核对进程和该目录，确认服务不可见、bundle 已不在，再安装其他版本。不要把 Windows 说明里 resource 文件夹中的卸载程序，或 Linux 的 `sudo /bin/uninstall-service` 拿到 macOS 上套用。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "应用还在时用资源目录中的脚本",
+      "paragraphs": [
+        "若 `/Applications/Clash Verge.app` 仍在，可用方法 2。卸载服务：",
+        "```\nsudo /Applications/Clash \\ Verge.app/Contents/Resources/resources/uninstall-service\n```",
+        "对应的安装服务命令是：",
+        "```\nsudo /Applications/Clash \\ Verge.app/Contents/Resources/resources/install-service\n```",
+        "文档注明：如果用此方式手动安装服务后，需重启 app 才能看到 UI 中的变化。路径里应用名含空格，反斜杠不能省略，否则 shell 会把路径拆开。建议顺序是：先停用 TUN，再执行 uninstall-service，检查进程中已看不到该服务，如 bundle 仍在则按方法 1 删除文件夹，最后才把 App 移入废纸篓。不要先安装新版本再回头补删旧 bundle。用户主目录里的配置与订阅是另一类文件，本次只处理系统级 TUN 服务和 PrivilegedHelper；卸 helper 不会自动备份订阅，留着 helper 也不会帮你保留配置。把服务卸干净的目标只有一个：下次安装时不再撞上旧的 service.bundle。",
+        "资料：https://www.clashverge.dev/uninstall.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

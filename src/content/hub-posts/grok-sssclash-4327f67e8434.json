@@ -1,0 +1,53 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：应用内更新又装到 C 盘，出现两个版本怎么清",
+  "description": "Clash Verge Rev 电脑端（Windows）：应用内更新又装到 C 盘，出现两个版本怎么清。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-4327f67e8434",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev 更新后还是旧版本",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "自定义目录装完，应用内更新仍可能落到默认位置",
+      "paragraphs": [
+        "Clash Verge Rev 的 Windows 安装包通过 GitHub Release 发布，多数电脑应选择 x64，只有 ARM 机器才选 arm64。安装说明中的默认位置会落到 C:\\Program Files\\Clash Verge。若曾经改过安装路径，或从很旧的版本一路使用应用内更新，常见问题文档写明：某些版本升级存在 Break Change，从很旧的版本升级会导致无法识别已安装目录，于是应用内更新会再装一份到 C 盘默认目录，系统里就像出现两个版本。",
+        "判断依据可以同时看这几项：磁盘上能找到两套安装目录；开机之后真正在跑的是旧副本；新装的那一份反复提示更新；任务管理器里出现两个启动项。静默启动失效也可以一并出现：配置了静默启动却仍然弹出窗口。文档说明如果任务管理器中有两个启动项，请用管理员权限启动软件后开关一次开机启动设置，以删除多余启动项；若平时一直以管理员权限运行，则改用普通用户权限运行后再开关一次。自启动被清掉时，重新开关一次开机启动即可。这样设计是因为旧名称与新名称不同，以及安装路径混乱会启动多个进程。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先卸干净多份，再只保留一个最新安装",
+      "paragraphs": [
+        "不要只删除快捷方式。文档给出的解决办法是：手动卸载系统中存在的多个 Clash Verge Rev，然后重新安装最新版本，后续更新才不会再出现此类问题。建议顺序：从托盘彻底退出并确认没有残留进程；把能看到的多份 Clash Verge Rev 全部卸载；检查自定义目录以及 C:\\Program Files\\Clash Verge 是否还留下 clash-verge.exe、verge-mihomo.exe 等主程序和内核；再只安装一份与机器架构相符的最新包。",
+        "若还需要服务模式和 TUN，文档建议使用官方安装包安装到默认的 C:\\Program Files\\Clash Verge，避免给普通账户授予该目录的修改或完全控制权限，也不要把旧目录的自定义权限复制过去。装完后在设置的服务模式中重新安装服务，确认首页显示服务模式，再按需开启 TUN。应用内更新指向错误目录的原因是识别不到原安装位置，不是订阅损坏，不必靠清空配置目录来处理双版本。安装清单里还能看到 clash-verge-service.exe、install-service.exe、uninstall-service.exe 等文件，卸载时应让这些文件随安装目录一起离开，避免旧服务指向已经不存在的路径。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "开机自启仍在跑旧副本时如何收尾",
+      "paragraphs": [
+        "卸载重装之后，如果开机仍弹出旧界面或反复提示更新，按自启动相关条目处理：每次安装会把之前的旧启动项清除，需要重新开关一次开机启动；若存在两个启动项，用与日常运行相反的权限打开软件，把开机启动拨一次再拨回去。处理完成之后，任务管理器里应只看到一份 clash-verge.exe 在运行，更新提示也应只针对刚刚安装的那一份。",
+        "也可以改用 WinGet：winget install ClashVergeRev.ClashVergeRev。Scoop 渠道在文档中标明为社区维护，不为下游问题提供支持。无论哪种来源，都不要让旧的便携目录和新的安装目录同时进入开机启动。若面板无法打开，文档将其归为 WebView2 缺失或被禁用，需要恢复 WebView2 或改用带 fixed_webview2 字样的安装包，那和双版本不是同一类问题，不要用再更新一次去修。把双版本清到只剩默认目录中的一份最新安装，应用内更新才不会继续往 C 盘默认位置叠新副本。",
+        "资料：\nhttps://www.clashverge.dev/faq/windows.html\nhttps://www.clashverge.dev/install.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

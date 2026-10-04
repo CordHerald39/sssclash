@@ -1,0 +1,54 @@
+{
+  "title": "FlClash 电脑端（Windows）：任务栏还在、窗口白屏或跑到屏幕外，代理却还能用",
+  "description": "FlClash 电脑端（Windows）：任务栏还在、窗口白屏或跑到屏幕外，代理却还能用。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-8cc3381ee64b",
+  "category": "故障排查",
+  "tags": [
+    "FlClash 白屏 窗口消失",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "先确认是窗口丢失而不是内核退出",
+      "paragraphs": [
+        "FlClash 是基于 ClashMeta 的多平台代理客户端，Windows 10 及以上提供安装版与便携版，桌面端同时提供 x64 与 ARM64。当任务栏里还能看到图标，鼠标悬停预览却是一块纯白矩形，点击图标无法唤出界面，任务管理器中 FlClash.exe 仍在，并且系统代理或 TUN 仍在转发流量时，应判定为窗口几何异常，而不是订阅失效、配置丢失或内核崩溃。",
+        "动手前用三条对照：进程仍在运行；代理仍然可用；只有窗口不可见。三条同时成立，就去处理窗口坐标。若进程已经消失，或代理一并停止，再转向闪退、权限和配置导入。公开讨论指出该现象更容易出现在同时使用两台显示器时，断开副屏后窗口仍被记在屏幕外；也可以先试系统最大化快捷键，把窗口拉回可见区域再拖动。维护说明写明，从 0.8.97 起会把窗口几何恢复到可见屏幕，并在启动失败时仍然尝试显示窗口。因此先核对当前版本是否已包含这项修复，避免在新版本上把其他问题误当成坐标文件损坏。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "位置写在 shared_preferences 的转义 JSON 里",
+      "paragraphs": [
+        "窗口的宽度、高度、顶边距和左边距保存在用户配置目录下的 shared_preferences.json，完整相对路径为 `%APPDATA%\\com.follow\\clash\\shared_preferences.json`。真正容易改坏的是字段 flutter.config：它不是普通嵌套对象，而是一段被转义的 JSON 字符串。如果按普通 JSON 的方式直接改 windowProps，少写一个反斜杠就会让整份设置文件失效，客户端只能在后台拉起进程，界面彻底不出现。",
+        "当 width 或 height 被存成 0，或 top、left 落到当前显示器工作区之外，就会出现白屏或窗口跑到屏幕外，但内核进程可以继续工作，所以代理看起来还能用。必须分清文件职责：这份 JSON 只保存界面偏好；订阅和配置资料通常在同目录的 database.sqlite。排查窗口问题时不要删除数据库，否则配置资料会一并丢失。也不要在客户端仍在运行时直接改文件，应先结束全部 FlClash.exe，否则进程可能把屏幕外坐标再次写回去。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改 windowProps，改坏了再隔离设置文件",
+      "paragraphs": [
+        "结束进程后代理会短暂断开，这是预期现象。打开 PowerShell，先备份再二次解析 JSON，把窗口写回主屏可见区域，例如宽度 1200、高度 760、距顶部 80、距左边 120。关键步骤是：先对整份文件 ConvertFrom-Json，再对 flutter.config 做第二次 ConvertFrom-Json，修改 windowProps 之后压缩写回，文件编码使用 UTF8。",
+        "```\n$p = Join-Path $env:APPDATA 'com.follow\\clash\\shared_preferences.json'\nCopy-Item $p \"$p.bak\" -Force\n$outer = Get-Content $p -Raw | ConvertFrom-Json\n$inner = $outer.'flutter.config' | ConvertFrom-Json\n$inner.windowProps = [pscustomobject]@{\n  width  = 1200.0\n  height = 760.0\n  top    = 80.0\n  left   = 120.0\n}\n$outer.'flutter.config' = $inner | ConvertTo-Json -Depth 100 -Compress\n$outer | ConvertTo-Json -Depth 100 -Compress | Set-Content $p -Encoding UTF8\n```",
+        "若 PowerShell 提示 JSON 格式错误，说明 shared_preferences.json 已经被手动修改损坏。此时结束 FlClash，将该文件重命名为 shared_preferences.json.bak，并删除同目录下的 FlClash.lock（若存在），然后重新启动，让程序生成新的设置文件。这一步仍然不要删除 database.sqlite。启动后窗口应出现在主屏幕左上方。若依旧只有白框，再核对版本是否包含窗口恢复逻辑，并避免在外接屏热插拔时把窗口留在即将断开的显示器上。架构选错安装包会导致另一类无法运行，和窗口坐标不是同一条路径。",
+        "资料：\nhttps://github.com/chen08209/FlClash/issues/2391\nhttps://github.com/chen08209/FlClash/blob/main/README_zh_CN.md"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

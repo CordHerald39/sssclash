@@ -1,0 +1,65 @@
+{
+  "title": "Clash Meta 手机端（Android）：开了代理再开热点，电脑为什么还是直连",
+  "description": "Clash Meta 手机端（Android）：开了代理再开热点，电脑为什么还是直连。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-49681f2867f7",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta 热点共享 VPN",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "手机上 Clash Meta 已经连上，再开个人热点，电脑连热点后却仍走直连，通常不是节点失效，而是下游流量没有进入 VpnService。MetaCubeX 的 Tun 说明写明：在 Android 中 auto-redirect 仅转发本地 IPv4 连接；要通过热点或中继共享 VPN 连接，需要使用 VPNHotspot 这类专门方案。Android 官方 VPN 接口也是把当前用户的网络接到虚拟网卡，并不把 tethering 下游自动塞进同一条隧道。无 root 时，客户端不能充当整机透明代理网关。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先判断电脑有没有进手机的 VPN 会话",
+      "paragraphs": [
+        "让电脑只连这台手机的热点，确认网关是手机分配的地址。同时看手机客户端的连接列表有没有新增来自电脑的会话。若手机本机应用已经按规则出站，电脑却不增加连接、出口也不变，就可以判定热点流量在 VPN 旁路。电脑浏览器自身的系统代理开关、DNS 缓存，属于更外层，应在确认旁路之后再查。",
+        "手机状态栏有钥匙图标，只说明当前用户的 VpnService 处于活动状态，不能外推到 USB 共享或 Wi-Fi 热点上的设备。电脑能上网，只说明 tethering 把上游蜂窝或 Wi-Fi 转发出去了，与是否经过 Clash 的 TUN 描述符不是同一件事。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "Android TUN 只管本机 IPv4",
+      "paragraphs": [
+        "Tun 的 auto-route、strict-route、include-package、exclude-package、include-android-user 都作用在本机。常用用户 ID 里，机主是 0，分身是 10，应用多开是 999，都与热点下游无关。私人 DNS 打开时，DNS 请求也无法按 dns-hijack 自动导入。Builder 里的 addRoute 改的是本机路由，热点共享走 tethering，下游设备的包在 NAT 转发路径上，默认不会进 Clash 的 TUN 描述符。",
+        "因此“手机开了代理”只保证手机自己的套接字，不保证热点上的电脑。IPv6 或非本机接口上的流量更不在这段 auto-redirect 的范围内。把 include-package 写成浏览器包名，也只影响手机里的那个应用。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "无 root 时不要指望透明共享",
+      "paragraphs": [
+        "没有 root，应用只能通过 VpnService 拿到本机 TUN 文件描述符，不能改内核转发规则去捕获热点接口。电脑把手机当默认网关时，包在共享栈转发，上游是手机当时的蜂窝或 Wi-Fi，于是表现为直连。文档给出的共享路径是 VPNHotspot，而不是把 auto-redirect 打开了事。auto-redirect 在 Linux 上才配合 iptables 或 nftables 做 TCP 重定向，Android 段落已经限定为本地 IPv4。",
+        "若在电脑上填写手机的 HTTP 或 SOCKS 入站，那是显式代理，需要手机监听并允许热点网段访问该端口。这不是 TUN 透明模式，也不是 VpnService 的默认能力。未做入站放行时，不要认为开了代理就等于开了共享。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "可以怎么处理",
+      "paragraphs": [
+        "先接受默认热点不等于代理共享。下游也要走代理时，按 Tun 文档使用可把 VPN 再共享出去的方案，或在电脑上单独配置代理客户端。验收标准是电脑出口与手机连接列表同时变化，而不是只看手机状态栏有没有钥匙图标。只有手机浏览器走了规则，不能说明热点已接入隧道。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://developer.android.com/develop/connectivity/vpn"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Clash Party 电脑端（macOS）：只能 sudo 打开，报 EACCES 或 SingletonLock 怎么办",
+  "description": "Clash Party 电脑端（macOS）：只能 sudo 打开，报 EACCES 或 SingletonLock 怎么办。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-dd0b584809e4",
+  "category": "故障排查",
+  "tags": [
+    "Clash Party macOS 打不开 权限",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "macOS 上 Clash Party 只能靠 `sudo` 打开，日志出现 `EACCES` 或 `SingletonLock`，多半是配置目录属主变成了 root。配置写在 `~/Library/Application Support/mihomo-party`。曾经用管理员启动，或对目录做过过宽的权限修改后，普通用户既建不了 `themes`，也拿不到单实例锁。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先核对这两条报错",
+      "paragraphs": [
+        "议题里失败启动的关键输出是：",
+        "- 无法创建 `mihomo-party/SingletonLock`，提示 `Permission denied`\n- `EACCES: permission denied, mkdir '.../mihomo-party/themes'`",
+        "两者都指向同一目录。客户端用 `SingletonLock` 保证只跑一份，初始化时还要创建 `themes`。目录属主是 root、当前登录账号是普通用户时，这两步都会失败：双击没有窗口，终端直接启动同样失败，只有 `sudo` 能起来。",
+        "判断依据：",
+        "- 该目录属主是 `root`，组是 `staff`，而你的登录名不是 root。\n- 不加 `sudo` 必失败，一加 `sudo` 就成功。\n- 失败点是锁文件或 `themes` 目录，而不是内核下载、订阅解析。",
+        "属主已经是个人用户后仍打不开，再去看内核 sidecar，那是另一类问题，不要和这一步混在一起。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把目录还回登录用户",
+      "paragraphs": [
+        "不要再用过于宽的权限设置糊过去，那会让后续新文件继续跟着「谁启动谁拥有」走。按下面做：",
+        "1. 完全退出客户端，确认没有残留进程。\n2. 在终端执行：`sudo chown -R 你的本机用户名 \"~/Library/Application Support/mihomo-party/\"`。把「你的本机用户名」换成 `whoami` 的结果。\n3. 再查看目录属主，应是你的用户加 `staff`，而不是 `root` 加 `staff`。议题里安装后出现 `root staff`、改成个人用户后才能正常使用，说的就是这一层。\n4. 不要加 `sudo`，直接启动应用。能够创建 `SingletonLock`，并且不再报 `mkdir themes` 失败，才算权限恢复。",
+        "之后不要把 `sudo` 当成日常启动方式。用 root 跑一次，新写出的文件又会变成 root，下一轮普通用户会再次 `EACCES`。只修一次属主却继续用管理员打开，问题会反复出现。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "和内核套接字问题分开处理",
+      "paragraphs": [
+        "另一则讨论里还有内核启动失败的处理：给应用包 `Contents/Resources/sidecar` 里的 `mihomo` 调整属主和权限，以及删除 `/tmp/mihomo-party.sock`。那是内核进程和套接字的问题。当前日志如果已经明确是 `SingletonLock` 与 `themes` 的 `EACCES`，不要先动 sidecar，更不要删除 `mihomo-party-helper.sock` 这类 helper 套接字。",
+        "对照顺序：",
+        "- 先修 Application Support 属主，让图形界面能在普通用户下启动。\n- 界面能起来但内核报错，再考虑 sidecar 和 `/tmp/mihomo-party.sock`。\n- 系统代理报错且日志不是权限拒绝，也不要在这一步改目录属主。",
+        "修好后的验收是：普通用户启动一次，目录下能出现当前用户拥有的锁文件，`themes` 可写，且不再依赖 `sudo`。只要还依赖管理员身份才能打开，属主问题就没有结束。",
+        "https://github.com/mihomo-party-org/clash-party/issues/848\nhttps://github.com/mihomo-party-org/clash-party/issues/779"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

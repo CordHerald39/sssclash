@@ -1,0 +1,58 @@
+{
+  "title": "Clash TUN 的 MTU 设置怎么检查，什么情况下需要调整",
+  "description": "Clash TUN 的 MTU 设置怎么检查，什么情况下需要调整。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-003",
+  "category": "故障排查",
+  "tags": [
+    "Clash TUN MTU",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "TUN 入站里的 mtu 表示最大传输单元。文档的说明是：它会影响极限状态下的速率，一般用户保持默认即可。因此适用条件很窄：已经启用 TUN，并且你在对照与报文大小、分段卸载相关的极限传输，而不是把该字段当成日常必填项。检查时要连同 enable、stack、device、gso 一起看，单独改一个数字缺少判断依据。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "从配置里确认 MTU 有没有被写出",
+      "paragraphs": [
+        "tun 段可以把 mtu 与 stack、device、auto-route、dns-hijack 并列书写。判断依据：若配置未写 mtu，表示使用默认，不必为了看起来完整而抄示例数字；若写了，该值才是当前最大传输单元。操作步骤：打开 TUN 配置，确认 enable 为真；记录 stack（system、gvisor、mixed、mips）和 device；查看是否存在 mtu 键。MacOS 设备名只能以 utun 开头，这一条影响网卡能否创建，不能用来反推 MTU 是否合适。",
+        "若 TUN 根本没有起来，下一步先处理 enable、以及文档所述的防火墙放行方向，而不是调整 mtu。文档写明打开防火墙时 system 与 mixed 可能无法使用，并分别给出 Windows 放行内核、MacOS 放行应用、Linux 放行 TUN 网卡出站的检查路径，这些都应优先于改传输单元。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "什么情况下才需要调整",
+      "paragraphs": [
+        "文档把 mtu 的影响范围限定在极限状态下的速率，并写明一般用户默认即可。需要调整的情况应同时满足：TUN 已经稳定工作；问题出现在大包或极限传输路径；你准备把 mtu 与 gso、gso-max-size 一并作为传输单元相关项来对照。gso 是通用分段卸载，仅支持 Linux；gso-max-size 表示数据块最大长度。非 Linux 或未启用 gso 时，不要把分段卸载项当成 MTU 的替代。",
+        "不需要调整的情况包括：只更换 stack、只配置 auto-route 或 dns-hijack、只排除网卡、UID、MAC 或 Android 包名。这些项改变的是谁的流量进入 TUN，而不是单帧可承载的最大载荷。判断依据：能指出当前问题与传输单元有关，而不是解析失败、路由未接管或防火墙未放行。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "调整失败后的下一步",
+      "paragraphs": [
+        "若改动 mtu 后连接异常，下一步是去掉该键以回到默认，而不是继续加减数字。随后检查 strict-route、auto-redirect、route-address 是否改变了可达性。在 Linux 上若同时启用了 auto-route 与 auto-redirect，还要区分 nftables 地址集绕行，它们与 MTU 无关。udp-timeout、endpoint-independent-nat、拥塞控制算法只在各自条件下生效，不能用来验证 MTU。inet6-address 还依赖系统 IPv6 检查与顶层 IPv6 开关，也不要和 mtu 混为一谈。",
+        "仍无法判断时，把 tun 段缩到 enable、stack、auto-route、mtu 四项对照，确认没有把示例里的数值当成必须值。文档没有把某一数字规定为通用最优，因此不能以更大一定更好作为结论。",
+        "https://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

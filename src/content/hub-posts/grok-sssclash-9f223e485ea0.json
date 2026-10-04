@@ -1,0 +1,70 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：日志报 socket 权限被禁止，要不要重启 HNS",
+  "description": "Clash Verge Rev 电脑端（Windows）：日志报 socket 权限被禁止，要不要重启 HNS。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-9f223e485ea0",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev 无法选中订阅",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "订阅列表点不了、日志出现 socket 访问权限被禁止时，文档没有把它写成重装客户端。对应条目是「无法选中订阅」，处理对象是 Host Network Service（HNS），不是 clash-verge.exe 本身。混合端口要在本机绑定套接字，HNS 未运行或异常时，就会打出这条英文报错。",
+      "paragraphs": [
+        "场景：软件能打开，点订阅没有反应，日志出现 access permissions 整句。不要卸客户端。用管理员命令行重启 HNS 后再选订阅。若日志其实是 WebView 或防火墙条目，则走对应条目，而不是停 HNS。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "报错原文怎样和「无法选中订阅」对应",
+      "paragraphs": [
+        "Windows 常见问题写明日志报错：An attempt was made to access a socket in a way forbidden by its access permissions. 条目标题是无法选中订阅。判断时要同时看界面和日志，不要只凭点击没反应就重装。",
+        "判断依据：",
+        "1. 配置卡片能看见，但无法选中订阅。\n2. 日志出现上述 access permissions 整句，而不是 WebView2、防火墙或杀毒相关描述。\n3. 刚开机、休眠恢复，或刚调整过与虚拟网络相关的系统组件之后更容易遇到。文档未写全触发条件，但给出的修复是重启该服务。",
+        "同一页「Windows 代理菜单空白」写的是内核通信失败，办法是先关闭再开启防火墙；「无法启动/不显示界面」写的是缺少或禁用了 WebView2。这两条都不会用 access permissions 这句作为标志，不要混用步骤。把「点了没反应」一律当成订阅损坏，会把排查方向带到重下配置，而日志里的套接字权限并不会因此消失。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用命令或服务管理器重启 HNS",
+      "paragraphs": [
+        "文档给出的办法：系统服务没有开启，执行下列命令开启服务。",
+        "```\nnet stop hns\nnet start hns\n```",
+        "或者手动打开服务设置，重新启动 Host Network Service。",
+        "建议步骤：",
+        "1. 先退出 Clash Verge Rev。\n2. 以管理员身份打开命令提示符。\n3. 执行 `net stop hns`，等到已停止。\n4. 执行 `net start hns`，等到已启动。\n5. 再打开 Clash Verge Rev，尝试选中订阅。",
+        "不用命令时，打开服务管理器，找到 Host Network Service，选择重新启动。服务显示名称以文档中的 Host Network Service 为准。",
+        "判断依据：HNS 重启后同一份订阅能选中，且日志不再出现该句权限报错，说明是套接字绑定被该服务占用或禁用，而不是 YAML 损坏。文档把命令写成先 stop 再 start，不要颠倒。若 stop 提示无法停止，先检查是否有其它网络虚拟化组件占用，再重试；仍然不要先卸载客户端。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "哪些情况不要重装，要和相邻条目分开",
+      "paragraphs": [
+        "同一篇文档另有「应用内更新后自动安装到了 C 盘默认目录/应用内更新后仍然是旧版本」：那是旧版本升级无法识别已安装目录，解决办法才是手动卸载系统中存在的多个 Clash Verge Rev，然后重新安装最新版本。socket 权限这一条没有写这一步。",
+        "「找不到 VCRUNTIMEXXX.dll」指向缺少 VC 运行库；「此应用无法在你的电脑上运行」指向下错 x64 或 arm64 安装包。它们都不会产生 access permissions 这句英文。",
+        "「闪退」写的是 360、金山毒霸等拦截服务模式安装，解决办法写的是不要使用这类软件，同样不是 HNS。",
+        "操作原则：先对照日志是否为该句 socket 报错；是则只重启 HNS。重启后仍无法选中，再查防火墙是否挡住内核通信，或界面根本没起来。把客户端卸了重装，HNS 状态不一定改变，报错仍可能在。不要把「无法选中订阅」理解成订阅链接失效；链接无效通常不会写出 socket 权限这句。",
+        "资料：",
+        "https://www.clashverge.dev/faq/windows.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

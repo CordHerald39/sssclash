@@ -1,0 +1,55 @@
+{
+  "title": "Clash DIRECT 与 REJECT 规则对连接产生什么影响",
+  "description": "Clash DIRECT 与 REJECT 规则对连接产生什么影响。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-009",
+  "category": "配置教程",
+  "tags": [
+    "Clash DIRECT REJECT",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "DIRECT 与 REJECT 占用规则的策略位",
+      "paragraphs": [
+        "`rules` 里每一条都是「匹配类型,条件,策略」这样的逗号分隔结构。手册把 `DOMAIN,ad.com,REJECT` 作为拒绝示例，把 `IP-CIDR,127.0.0.0/8,DIRECT,no-resolve`、`GEOIP,CN,DIRECT` 作为直连示例，逻辑规则里也能看到最后一段写 `DIRECT`、`REJECT` 或 `PROXY`。可见 DIRECT 与 REJECT 不是 `DOMAIN`、`GEOIP` 那种匹配类型，而是命中之后用来处理连接的策略名，和 `auto`、`PROXY` 以及自定义策略组名处于同一位置。",
+        "对连接的影响可以这样判断：请求一旦命中某行，就按该行第三段策略名离开规则表（UDP 缺能力时除外，见后文）。第三段为 `DIRECT` 时，连接按直连策略处理；为 `REJECT` 时，按拒绝策略处理。二者不会因为条件相似而自动合并。本页没有描述拒绝时是复位还是静默丢弃，也没有给出直连的接口或路由表细节，因此不能把未写明的报文行为写成保证。示例意图很清楚：广告类域名走向 `REJECT`，回环网段与 CN 的 GEOIP 走向 `DIRECT`。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "命中后还会被哪些规则改写预期",
+      "paragraphs": [
+        "优先级是从上到下，顶部高于底部。若更靠上的一行已经把同一请求交给 `PROXY` 或某个组，后面的 `DIRECT`/`REJECT` 不会再执行。`MATCH` 匹配所有请求、无需条件，若写在 `REJECT` 前面，拒绝规则等于不可达；通常应留在最后，示例为 `MATCH,auto`。",
+        "`AND`、`OR`、`NOT` 只决定该行条件是否成立，成立后仍然采用该行策略。例如 `OR,((NETWORK,UDP),(DOMAIN,baidu.com)),REJECT` 一旦为真，连接按 `REJECT` 处理。`RULE-SET` 引用规则集合，集合命中后同样走向该行策略。`SUB-RULE` 进入子规则，最终策略以子规则匹配结果为准，而不是父行随便写一个 DIRECT。",
+        "如请求为 udp，而代理节点没有 udp 支持（例如 ss 节点没写 `udp: true`），则会继续向下匹配。这条针对「所选出口不能走 UDP」的继续匹配。DIRECT 与 REJECT 不是普通需要 `udp: true` 的代理节点写法，排错时先确认到底有没有命中那一行，再考虑 UDP 是否导致跳过了某个代理策略、落到后面的 DIRECT 或 REJECT。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "场景步骤、判断依据与失败后的下一步",
+      "paragraphs": [
+        "场景：广告域名仍能建立业务连接。步骤：在列表中查找条件覆盖该域名且策略为 `REJECT` 的行；确认它位于更宽的后缀规则、`GEOSITE` 和 `MATCH` 之前。判断依据是从上到下第一条命中规则的第三段是否为 `REJECT`。",
+        "场景：本应直连的国内目标却进入代理。步骤：核对 `GEOIP,CN,DIRECT` 或相应 IP 规则是否存在、是否被更靠上的域名规则截走。目标 IP 类规则可加 `no-resolve` 跳过 DNS；但若更早匹配已触发解析，带 `no-resolve` 的 IP 规则仍可匹配。判断依据是最终命中行的策略名是不是 `DIRECT`。",
+        "失败后的下一步：先记录命中行全文。若策略名不是预期的 `DIRECT` 或 `REJECT`，调整顺序或条件，不要假设二者与 `PROXY` 等价。若策略名已正确仍异常，再查逻辑规则括号、`RULE-SET` 名称、附加参数 `src`（把目标 IP 匹配转为来源 IP 匹配）以及 UDP 继续匹配。不要对拦截率或直连速度做保证。",
+        "参考资料：https://wiki.metacubex.one/config/rules/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

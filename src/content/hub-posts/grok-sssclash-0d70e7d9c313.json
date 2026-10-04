@@ -1,0 +1,63 @@
+{
+  "title": "Clash Verge Rev 电脑端：全局扩展里的 nameserver-policy 为什么会被订阅扩展整表换掉",
+  "description": "Clash Verge Rev 电脑端：全局扩展里的 nameserver-policy 为什么会被订阅扩展整表换掉。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-0d70e7d9c313",
+  "category": "配置教程",
+  "tags": [
+    "Clash Verge Rev 全局扩展 nameserver-policy 被订阅扩展覆盖",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "合并链路从哪一步开始整表替换",
+      "paragraphs": [
+        "Clash Verge Rev 桌面端（Windows、macOS、Linux）从 v2.5.5 起调整了扩展配置的合并规则。执行顺序是：订阅原文 → 应用设置 → 全局扩展配置 → 全局扩展脚本 → 订阅扩展配置 → 订阅扩展脚本 → 应用设置回写。",
+        "全局扩展适合大多数订阅都要生效的项，需要特殊处理的订阅再用订阅扩展。两层会同时生效，只是后写的 dns 表会换掉先写的表，并不等于表内逐条合并。",
+        "扩展配置只改写出的字段，没写的字段保持不变。列表和普通值整体替换；tun、sniffer 这类其他嵌套对象逐项合并。特别地：dns 下写出的字段和顶层 hosts 改为整体替换，nameserver-policy、fallback-filter 这类表也不例外；dns 中没写的字段仍保留。",
+        "每一层都在上一层结果上执行同一规则。因此订阅扩展配置一旦写出 `dns.nameserver-policy`，全局扩展里写过的那一份会被整个换掉。",
+        "判断依据：版本为 v2.5.5 或更新；全局扩展和订阅扩展都写了 `dns.nameserver-policy`；最终配置里看不到全局那几条键。若只有全局扩展写了 dns 策略、订阅扩展完全没写 dns，则全局结果会保留。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "文档示例里最终为什么只剩 +.example.com",
+      "paragraphs": [
+        "文档对照如下（解析器请按自己的服务器填写）：",
+        "```yaml\n# 全局扩展配置\ndns:\n  nameserver-policy:\n    \"geosite:cn\": <国内解析>",
+        "# 订阅扩展配置\ndns:\n  nameserver-policy:\n    \"+.example.com\": <该订阅解析>\n```",
+        "全局先写入 `geosite:cn`。轮到订阅扩展时，因为它写出了整个 `nameserver-policy` 表，合并规则按整体替换处理，于是 `geosite:cn` 被拿掉，最终只剩 `+.example.com` 一条。",
+        "hosts 只要在某一层扩展里写出来，也会整表替换上一层。dns 里没出现的兄弟字段（例如只写了 nameserver-policy、没写 listen）仍保留上一层的值。",
+        "场景判断：预期国内域名走 geosite:cn、某个订阅的 example.com 走专用策略，结果 geosite:cn 消失——不是内核随机丢键，而是订阅扩展整表覆盖。若订阅扩展写的是 tun 子字段，行为则是逐项合并，不要用 tun 的经验去套 dns 表。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "两条都要生效时怎么改",
+      "paragraphs": [
+        "做法一：把全局那条一并写进该订阅的扩展配置，让最后一次写出的表里同时包含 `geosite:cn` 和 `+.example.com`。适合订阅数量少、愿意在每个订阅扩展里维护完整 policy 的情况。",
+        "做法二：全局扩展继续放公共条目，订阅专属条目放到订阅扩展脚本里逐条追加。订阅扩展脚本在链路中最后执行，可以往已有对象上加键，而不是再写一份只含一条的 yaml 表去覆盖：",
+        "```javascript\nfunction main(config) {\n  config.dns = config.dns || {};\n  config.dns[\"nameserver-policy\"] = config.dns[\"nameserver-policy\"] || {};\n  config.dns[\"nameserver-policy\"][\"+.example.com\"] = \"<该订阅解析>\";\n  return config;\n}\n```",
+        "步骤：先看全局扩展是否写出 nameserver-policy → 再看该订阅扩展是否也写出了同名字段 → 若 yaml 双写，改为完整表放在最后一层或改用脚本追加 → 重载后检查最终配置里两条键是否同时存在。",
+        "设置页接管的字段会在链路末尾写回，扩展里改这些值会被丢弃。nameserver-policy 不在接管清单里，它被换掉只因为 dns 表的整体替换，不要和 mixed-port、tun.enable 那些应用回写问题混为一谈。",
+        "参考资料：\nhttps://www.clashverge.dev/guide/extend.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

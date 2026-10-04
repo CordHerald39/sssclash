@@ -1,0 +1,58 @@
+{
+  "title": "Clash 的 IPv6 开关与 DNS IPv6 设置有什么区别",
+  "description": "Clash 的 IPv6 开关与 DNS IPv6 设置有什么区别。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-004",
+  "category": "配置教程",
+  "tags": [
+    "Clash IPv6",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash 配置里和 IPv6 有关的开关不止一处，但本篇只依据 DNS 文档区分：dns 段的 ipv6 字段控制是否解析 IPv6，它与 DNS 模块总开关、服务器附加参数里的丢弃 AAAA，以及 fake-ip 的 IPv6 网段不是同一层。适用条件是你已经启用 DNS 模块，并在观察 AAAA 查询结果。若把关掉 IPv6 理解成停用整个 DNS，会误改 enable。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "DNS 段的 ipv6 管的是 AAAA 解析",
+      "paragraphs": [
+        "dns.enable 为 false 时使用系统 DNS，内核不再按这段配置处理查询。dns.ipv6 的说明是：是否解析 IPv6；为 false 时回应 AAAA 的空解析。因此它是解析策略，不是监听地址写成哪一种协议，也不是网卡是否拥有 IPv6 地址。listen 只表示 DNS 服务监听，支持 udp 与 tcp。判断依据：关闭 dns.ipv6 后，AAAA 应为空回应，A 记录仍由 nameserver、fallback、nameserver-policy 等路径决定。",
+        "操作步骤：确认 enable 为 true；只改 ipv6 一项；对同一域名分别看 A 与 AAAA。若 AAAA 仍有结果，下一步检查该字段是否写在 dns 映射之外，或客户端根本没有把查询送到 dns.listen。不要把 default-nameserver 必须填写 IP 这一约束，理解成 IPv6 开关。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "和服务器附加参数、映射网段的区别",
+      "paragraphs": [
+        "发向公网 DNS 服务器的地址可用井号附加参数，并用 & 连接多项。其中 disable-ipv6 表示丢弃 AAAA 回应，disable-ipv4 表示丢弃 A 回应，还可以按类型丢弃，例如屏蔽 HTTPS（TYPE65）。这与 dns.ipv6 的差别是：前者作用在具体服务器条目上，可以只让某一 nameserver 不返回 AAAA；后者是模块级解析开关，为 false 时统一对 AAAA 给空结果。不要两处同时改却只观察一台服务器。",
+        "fake-ip-range 是 fake-ip 模式下的 IPv4 段，fake-ip-range6 是 IPv6 段。它们回答映射地址从哪段分配，不回答要不要解析 AAAA。即使 dns.ipv6 为 true，未配置 IPv6 映射段也不等于关闭解析。prefer-h3、respect-rules 同样不承担 IPv6 开关的职责。判断依据：能分清空的 AAAA 回应、丢弃某台服务器的 AAAA、为 fake-ip 准备 IPv6 网段这三种现象。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "检查方法和失败后的下一步",
+      "paragraphs": [
+        "具体检查：列出 dns.ipv6、各 nameserver 是否带 disable-ipv6 或 disable-ipv4、是否存在 fake-ip-range6；再确认 nameserver-policy、proxy-server-nameserver、direct-nameserver 没有把查询送到你没想到的服务器。respect-rules 为真时 DNS 连接遵守路由规则，需要同时配置 proxy-server-nameserver，否则容易把节点域名解析和业务解析搅在一起，误判成 IPv6 开关失效。文档也不建议它与 prefer-h3 一起使用。",
+        "若关闭 dns.ipv6 后 IPv6 站点仍可打开，下一步区分是操作系统自己解析，还是查询未进入 Clash DNS。若只有某一加密 DNS 没有 AAAA，检查该条目的附加参数而不是全局 ipv6。若在 fake-ip 环境下 IPv6 映射异常，核对 fake-ip-range6 与 enhanced-mode，而不是反复拨动 ipv6 布尔值。不要把 fallback-filter 的 geoip 或 ipcidr 当成 IPv6 开关。",
+        "https://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "title": "Clash allow-lan 与 bind-address 如何影响局域网连接",
+  "description": "Clash allow-lan 与 bind-address 如何影响局域网连接。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-014",
+  "category": "配置教程",
+  "tags": [
+    "Clash allow-lan",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "allow-lan 控制其他设备能不能经过内核的代理端口访问互联网，bind-address 控制这些设备必须访问哪一个本地地址。二者再叠上 lan-allowed-ips 与 lan-disallowed-ips，才构成局域网接入的完整条件。只把允许局域网打开、却绑在错误网卡或把对端写进黑名单，会出现“开关是开的但旁边设备连不上”；绑在所有地址且白名单过宽，则会出现整段网络都能进代理口。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "开关、绑定与网段过滤如何串起来",
+      "paragraphs": [
+        "资料对允许局域网的定义是：允许其他设备经过 Clash 的代理端口访问互联网，可选 true 或 false。绑定地址则是仅允许其他设备通过这个地址访问。示例为：",
+        "```\nallow-lan: true\nbind-address: \"*\"\n```",
+        "`*` 表示绑定所有 IP 地址；也可以写成单个 IPv4，例如 192.168.31.31；或单个 IPv6，例如 `[aaaa::a8aa:ff:fe09:57d8]`。设备侧填写的代理服务器地址，必须是你绑定并实际在听的那个地址，而不是主机上任意一块网卡的 IP。",
+        "当 allow-lan 为 true 时，lan-allowed-ips 限制允许连接的 IP 地址段，默认值为 0.0.0.0/0 和 ::/0。lan-disallowed-ips 是禁止连接的段，黑名单优先级高于白名单，默认值为空。因此判断顺序是：总开关是否打开 → 内核绑在哪些地址 → 对端 IP 是否落在允许段且未落在禁止段。",
+        "http(s)、socks、mixed 代理还可以配置 authentication，并用 skip-auth-prefixes 指定免验证网段。这套用户验证不代替 allow-lan：未放行局域网时，其他设备根本不应经过代理端口；已放行但未通过验证时，表现为能碰到端口却建立不了已鉴权的代理会话。allow-lan 为 false 时，不要指望只改 bind-address 就能把某一台手机变成合法客户端。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "局域网设备连不上时的检查顺序",
+      "paragraphs": [
+        "1. 读 allow-lan。false 则其他设备失败是预期结果，先改这项再谈绑定。\n2. 读 bind-address。若不是 `*` 而是某张网卡的单地址，客户端必须填该地址；填了另一块网卡或填了 127.0.0.1，都会连错目标。\n3. 列出失败设备的源 IP，对照 lan-allowed-ips 是否覆盖该地址。只写了部分网段时，另一网段设备会被拒。\n4. 再对照 lan-disallowed-ips。即使白名单包含该地址，命中黑名单仍禁止，因为黑名单优先。\n5. 若配置了 authentication，检查对端是否位于 skip-auth-prefixes，以及客户端是否提交了用户名和密码。鉴权失败不要写成“绑定地址无效”。\n6. 确认 port、socks-port 或 mixed-port 等代理端口确实已开启。allow-lan 只决定外部设备能否使用这些端口，不会凭空创建入站。",
+        "判断依据：其他设备使用“bind-address 对应 IP + 已开启的代理端口”能够建立连接，并且源地址在允许段、不在禁止段，才说明局域网放行按文档生效。主机能被 ping 通但不能连代理端口，应留在这组开关里继续查，而不是去改 GEOIP 或策略组。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "放行范围不符合预期时的下一步",
+      "paragraphs": [
+        "邻设备超时或拒绝：确认 allow-lan 为 true；bind-address 没有只绑回环或未使用的接口；客户端填的是绑定地址。单 IP 绑定时，漏填该 IP、改填主机名解析到其他地址，都会失败。",
+        "只有某几台不行：把失败源 IP 写成 CIDR 后与黑白名单逐条对比。误把某台写成 /32 放进 lan-disallowed-ips，就会出现“其余设备正常、单机不行”，这是优先级设计，不是端口协议问题。",
+        "接入面比预想的大：把 bind-address 从 `*` 改为当前局域网网卡地址，收窄 lan-allowed-ips，把不信任地址写入 lan-disallowed-ips，并在需要时为 http/socks/mixed 加上 authentication。不要用空密钥的外部控制器去“补”代理口的访问控制，两套接口职责不同。",
+        "本机回环代理正常、局域网失败：正是 allow-lan 与 bind-address 的覆盖范围。先改这两项及网段列表，再考虑客户端软件填的是 HTTP 还是 SOCKS。",
+        "https://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

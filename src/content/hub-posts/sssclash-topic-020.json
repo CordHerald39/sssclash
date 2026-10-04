@@ -1,0 +1,55 @@
+{
+  "title": "FlClash 桌面版与 Android 版安装时需要核对哪些差异",
+  "description": "FlClash 桌面版与 Android 版安装时需要核对哪些差异。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-020",
+  "category": "版本对比",
+  "tags": [
+    "FlClash 桌面 Android",
+    "版本对比",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "FlClash 的定位是同一套基于 ClashMeta（mihomo）的多端代理客户端，覆盖 Android、Windows、macOS 和 Linux，桌面提供 x64 与 ARM64。安装时要核对的不是“会不会多一个内核”，而是包格式、系统版本、架构、托盘与权限相关的平台差异。功能上各端都围绕规则路由、代理组、延迟测试、系统代理和 TUN，配置可来自订阅链接或文件，并带编辑、覆写脚本以及自定义规则、节点和代理组。真正要在安装阶段分开处理的，是 Android 的应用包与桌面的安装器/便携包，以及 Linux 托盘依赖这类只在某一端出现的条件。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "安装包和系统基线不同",
+      "paragraphs": [
+        "Android 提供 arm64-v8a、armeabi-v7a 与 x86_64 的 APK，多数手机应核对应 arm64-v8a，并另有 F-Droid 仓库渠道。桌面则按操作系统拆包：Windows 10 及以上为安装器或便携压缩包，分 x64 与 ARM64，ARM 笔记本应选 ARM64；macOS 12 及以上为面向 Apple Silicon 与 Intel 的磁盘映像，也可用 Homebrew 的 cask 安装；Linux 为 deb、rpm 与 AppImage，同样分 x64 与 ARM64。判断依据是设备 CPU 与系统版本是否落在上述组合内，而不是下载“看起来最新”的任意文件。Android 侧还有快捷设置磁贴、分应用代理和 Android TV；桌面侧是托盘菜单与全局快捷键。这些能力不随错装包而自动出现，装错架构会直接无法安装或无法提供托盘。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "依赖、托盘和自动化要按端检查",
+      "paragraphs": [
+        "Linux 上 deb 会安装自身依赖；若使用 AppImage 或 rpm，需要另行安装 AyatanaAppIndicator 相关库，托盘图标才能显示，Debian/Ubuntu 与 Fedora 的包名不同。macOS 用 Homebrew 时是 tap 后以 cask 安装，和磁盘映像并行存在，不要混当成 Android 渠道。Android 可用任务类应用发送 START、STOP、TOGGLE 动作，或在计算机上用 adb 启动同一动作；桌面没有这组动作字符串。导入配置时 clash://、clashmeta:// 与 flclash:// 的 install-config 形式通用，参数写成 url= 即可，不要在说明里写虚构域名或完整网址，需要口令时只用 token=示例 这类片段。判断依据：Android 核对应 ABI 与是否需要磁贴/分应用；Windows 核对应安装器还是便携包以及是否为 ARM64；Linux 核对应包格式之外还要看托盘库是否存在。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "从源码构建时的差异与失败后下一步",
+      "paragraphs": [
+        "各端构建宿主不同：Android 可在任意主机交叉编译，但需要 Android SDK 与 NDK，并可只编单一 ABI；Windows 还需要 GCC（MinGW-w64）以及制作安装器的 Inno Setup；macOS 需要 Xcode 与 Node.js；Linux 构建说明以 Debian 或 Ubuntu 为准。公共前置是 Flutter、Go 与 Rust，产物落到 dist 目录。安装后若仅一端异常：先核对是否拿了另一端的包，例如把桌面压缩包当作手机安装文件，或在 ARM 设备上用了 x64。Linux 无托盘时先查指示器库，而不是重下内核。Android 自动化失败时核对动作字符串是否指向本应用。需要对照项目说明时使用下面资料。",
+        "https://github.com/chen08209/FlClash"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

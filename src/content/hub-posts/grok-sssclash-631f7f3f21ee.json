@@ -1,0 +1,59 @@
+{
+  "title": "FlClash 手机端（Android）：开了访问控制还要不要开 VPN 里的系统代理",
+  "description": "FlClash 手机端（Android）：开了访问控制还要不要开 VPN 里的系统代理。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-631f7f3f21ee",
+  "category": "配置教程",
+  "tags": [
+    "FlClash 访问控制 系统代理",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在 Android 上打开访问控制之后，默认不应再叠加一层系统 HTTP 代理。访问控制决定哪些应用的 IP 包进入 TUN 虚拟网卡、哪些应用绕开；系统代理决定哪些应用把 HTTP/HTTPS 送到内核的本地入站端口。两套出口叠在同一条 VPN 会话上时，被排除的微信、淘宝常常既不走 Tun 路由，又把请求打进内核监听端口，于是出现「排除名单已生效，应用却无法联网」。需要分应用直连时，用 TUN 的包名名单即可，不要再让系统代理把流量拐回内核。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "两套机制切的不是同一层流量",
+      "paragraphs": [
+        "TUN 在 `enable` 且 `auto-route` 打开后，会把全局流量导入 tun 网卡。`exclude-package` 让列出的 Android 包避免被 Tun 路由；`include-package` 只让列出的包进入 Tun，未配置的包不会被 Tun 路由。这是按包名做的三层分流，不依赖应用是否认识「代理服务器」这几个字。",
+        "系统代理工作在应用层。遵守代理设置的程序会把 HTTP/SOCKS 送到 mixed 一类入站；不遵守的程序根本不读这套设置。访问控制改的是 VpnService 对包名的允许或拒绝，系统代理改的是应用自己选择的 HTTP 出口，两边没有同步状态。开了访问控制，只说明系统在建立 TUN 接口时按包名分流；它不会自动取消 Wi-Fi 或系统设置里残留的 HTTP 代理。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "被排除应用为什么会分不清 VPN 内外",
+      "paragraphs": [
+        "被 `exclude-package` 排除的应用，本意是使用系统网络，如同 VPN 没有运行。若系统仍指向本地代理端口，这些应用的 HTTP 流量会再次进入内核入站。入站与 TUN 同属一套网络栈时，回流接口、DNS 劫持和套接字保护仍可能按「在 VPN 内」处理，于是出现分裂现象：未排除的浏览器正常，被排除的微信、淘宝转圈或失败。",
+        "文档还指出：Android 上若开启私人 DNS，则无法自动劫持 DNS 请求；`strict-route` 在启用 `auto-route` 时执行严格路由，可防止地址泄漏并让 DNS 劫持在 Android 上工作，也会让不支持的网络无法到达。系统代理再把 DNS 或 HTTP 拐进内核后，排除应用和未排除应用的解析路径不再一致。另外，`auto-redirect` 在 Android 中仅转发本地 IPv4 连接；不要用系统代理去补 IPv6 或非 HTTP 流量，那不是它的职责。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "推荐组合、操作步骤和判断依据",
+      "paragraphs": [
+        "场景：微信、淘宝直连，其他应用走规则。",
+        "1. 只启用 TUN，打开 `auto-route`，用 `exclude-package` 写入要直连的包名；或者用 `include-package` 只写入要进 VPN 的包名，不要混用两套名单的语义。\n2. 关闭系统 HTTP/SOCKS 代理，避免排除应用再次指向内核端口。\n3. 停止 VPN 后再开启，使新的包名名单随 VpnService 接口一起提交；然后再打开被排除的应用。\n4. 若需要把 VPN 分享给热点另一侧，文档写明 Android 上 auto-redirect 仅转发本地 IPv4，要通过热点或中继共享连接需使用 VPNHotspot 一类方案，而不是再开系统代理。",
+        "判断依据：被排除应用应能访问其业务域名，且新连接不再作为 Tun 流量出现；未排除应用仍进入 Tun。若排除应用完全没网而浏览器正常，优先关掉系统代理并重建 VPN，而不是继续追加规则。若只有解析失败，再查私人 DNS 与 `dns-hijack`。访问控制已经按包名切开三层流量时，再挂系统代理不会让排除更干净，只会让 VPN 内外边界变模糊。",
+        "资料来源：\nhttps://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

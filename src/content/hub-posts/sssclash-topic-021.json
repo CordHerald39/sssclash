@@ -1,0 +1,57 @@
+{
+  "title": "Clash Nyanpasu 更新前怎样整理配置与内核选择",
+  "description": "Clash Nyanpasu 更新前怎样整理配置与内核选择。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-021",
+  "category": "操作教程",
+  "tags": [
+    "Clash Nyanpasu 配置",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Nyanpasu 更新前真正要整理的，不是安装包文件名，而是界面工作副本、配置文件、增强脚本、Provider 与内核二进制这五层对象是否仍指向同一套假设。仓库把它写成基于 Tauri 的 Clash 图形界面，并内置 Clash Premium、Mihomo、Clash Rust 与 Meow；配置文件管理与增强支持 YAML、JavaScript 与 Lua，另外还有 Provider 管理。这五层并不一起升级：覆盖界面不会自动改写增强脚本，换内核也不会自动翻译另一内核的字段。更新前要把关系写成可核对的清单，否则失败时会把「内核读不懂增强产物」误判成安装损坏。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先分清界面、增强、Provider 与内核",
+      "paragraphs": [
+        "界面负责配置文件切换、增强执行入口和 Provider 列表；内核负责解析最终配置并转发流量。增强脚本在内核加载前改写 YAML，因此界面里选中的配置文件，不等于内核读到的文本。Provider 只说明拉取流程还在，不说明新内核认识这些字段。",
+        "判断依据有三条。第一，四种内核在特性里并列，只表示可切换，不表示同一份增强后的配置对四种内核等价。第二，JavaScript 与 Lua 属于界面侧增强，加载失败应先停用脚本、改用 YAML 原文，而不是先删配置文件。第三，Provider 能刷新，只证明网络与定时器，不证明规则集或代理字段仍被当前内核解析。若你无法回答「当前内核是哪一个、哪份文件会被真正加载、增强改过哪些顶层键」，就还没整理完。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按场景整理配置并选择内核",
+      "paragraphs": [
+        "场景一：只更新界面，内核种类不变。先记下内核名称与正在使用的配置文件名，再把配置文件、增强脚本、Provider 相关文件复制到安装目录以外。打开增强脚本，列出它改过的顶层键；凡是只对某一内核有意义的键，标成绑定关系。到仓库发布页确认本次发布改的是界面还是内置内核，并确认没有正在写入的 Provider 后，再覆盖安装。判断已整理完成的标准是：回退目录里能单独找到原文、增强后文本、Provider 缓存三类对象。",
+        "场景二：更新同时打算换内核。不要在覆盖安装的同一刻切换内核。先用旧内核加载无增强的原始配置，作为可回退基线；再准备「仅 YAML 增强」与「JavaScript 或 Lua 增强」的隔离副本。新内核只加载无增强副本，成功后再加 YAML 增强，最后才加脚本。规则 Provider 与代理 Provider 必须分开验证。内核选择依据：配置大量使用 Mihomo 体系字段时，应继续选 Mihomo，而不是换成 Clash Premium 或 Clash Rust 做顺便升级；增强脚本若改写了某内核才有的段落，换内核前先停用脚本。Meow 与 Clash Rust 同属仓库列出的可选内核，只有确认配置不含对方不支持的段落后再切换。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "失败后的下一步",
+      "paragraphs": [
+        "界面能启动但流量失败时，立刻切回更新前的内核与配置文件副本，用来区分回归与环境变化。若只有带脚本增强的配置文件失败，停用增强后用 YAML 原文加载；原文可用则改脚本，不要反复重装。若四种内核中仅一种能加载当前配置，说明配置已绑定该内核，应把默认内核改回，而不是删除配置文件。若 Provider 刷新成功但规则不生效，先用无 Provider 的静态规则验证内核，再逐个加回 Provider。对照特性、许可与发布入口时，以 https://github.com/libnyanpasu/clash-nyanpasu 为准。",
+        "资料：https://github.com/libnyanpasu/clash-nyanpasu"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "title": "FlClash 电脑端：节点明明能用，延迟测试却全超时，要不要改测试地址",
+  "description": "FlClash 电脑端：节点明明能用，延迟测试却全超时，要不要改测试地址。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-9fe8d3cca9df",
+  "category": "故障排查",
+  "tags": [
+    "FlClash 延迟测试地址",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "节点手动选上能上网，延迟测试却全部超时，第一反应常常是「要不要换一个测试地址」。可以换，但要先分清：健康检查失败不等于协议坏了。FlClash 电脑端沿用 mihomo 的 url-test 与代理集合 `health-check`：它们请求的是探测 URL，并按 `expected-status` 判断成败。默认探测地址不可达、被干扰，或返回码对不上期望值时，通的节点也会被标死。改成文档推荐的 generate_204 一类地址，只改变测速是否亮绿灯，不修复、也不证明节点握手本身有问题。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "健康检查看的是状态码，不是「能不能打开任意网页」",
+      "paragraphs": [
+        "策略组 url-test 需要配置 `url` 和 `interval`。代理集合则有独立的 `health-check` 块：`enable`、`url`、`interval`（秒）、`timeout`（毫秒）、`lazy`、`expected-status`。文档把探测地址和期望状态写在一起，是因为内核不只看 TCP 通不通，还看 HTTP 状态是否落在期望集合里。",
+        "判断依据：",
+        "- 手动指定节点后，浏览器或系统代理下目标站能打开：出站协议可用，优先查探测 URL 与期望状态。\n- 探测返回了页面，但状态码不是期望值（例如期望 204、实际 200 或 301）：健康检查仍会失败，列表照样超时或判死。\n- 换成另一条探测地址后，只有延迟数字变化、上网体验无明显对应关系：说明你改的是测速路径，不是节点定义。",
+        "`expected-status` 在文档中指向「期望状态」；写错范围时，节点并没有坏，只是探测被判不合格。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "什么时候该改测试地址，什么时候不该改",
+      "paragraphs": [
+        "代理集合文档对 `health-check.url` 的建议是使用 generate_204 一类专用探测，而不是随便拿一个会跳转、要登录、体积很大的首页。url-test 组示例同样把探测写成独立 `url` 字段，和成员协议、端口无关。",
+        "建议步骤：",
+        "1. 先固定一个手动能上网的节点，不要同时改节点参数和测试地址。\n2. 打开当前配置，分别记下策略组的 `url` 和代理集合 `health-check.url`、`expected-status`、`timeout`。两者不一致时，面板批量测试和自动选路可能各说各话。\n3. 若探测域名在直连下也打不开，或会跳转到门户页，再把 `url` 改成文档所列的探测类型，并把 `expected-status` 改成与该地址相符的码（文档示例常见为 204）。\n4. 改完只重新做健康检查，不要顺手改 cipher、端口、TLS。若改地址后延迟出现数字、上网路径与改前相同，即可认定原先是探测条件误杀。",
+        "不该改地址的情况：手动节点本身打不开网站、握手报错、订阅过期。这时换探测 URL 只会让列表更好看，或继续 Timeout，对协议没有诊断价值。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改地址只影响测速，还要核对 lazy 与集合覆写",
+      "paragraphs": [
+        "`health-check.lazy` 默认为 true：集合里的节点若当前没被用到，可以不测。你在面板上对「全部节点」强制测速时，等于临时关掉这种偷懒，超时和并发会一起出现。这与「节点坏了」无关，也与要不要换地址无关；应先缩小测试范围，再谈 URL。",
+        "代理集合的 `override` 能改 UDP、接口、证书校验等出站字段，但不会替代 `health-check.url`。把探测地址写进节点名或规则，不会让健康检查换路径。filter、exclude-filter、exclude-type 只决定哪些节点进入集合，同样不改变探测成功的标准。",
+        "结论：默认探测被干扰或返回码不符合 `expected-status` 时，健康检查会把能用的节点标死；换成 generate_204 一类地址，只让测速与内核的判定对齐。节点能不能用，仍然以手动选中后的真实访问为准。",
+        "资料：\nhttps://wiki.metacubex.one/config/proxy-groups/url-test/\nhttps://wiki.metacubex.one/config/proxy-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

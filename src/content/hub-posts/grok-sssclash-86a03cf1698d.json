@@ -1,0 +1,68 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：关机重启一直转圈，要不要先退出服务模式",
+  "description": "Clash Verge Rev 电脑端（Windows）：关机重启一直转圈，要不要先退出服务模式。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-86a03cf1698d",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev 关机卡住",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Windows 关机或重启停在转圈，提示有应用阻止，日志停在通过服务停止核心，和日常点托盘退出不是同一条路径。议题记录的是服务模式下会话结束清理被卡住。先从托盘正常退出再关机；不要在卡住时靠反复重装来处理关机。",
+      "paragraphs": [
+        "场景：晚上点重启，进度条停住并提示 Clash Verge Rev 阻止关机；取消后程序还在。先结束进程完成重启。以后关机前用托盘退出。若必须开机自动挂服务，再按卸载说明决定是否删除服务，而不是删除整个 Roaming。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "怎么判断卡在会话结束的服务 IPC",
+      "paragraphs": [
+        "议题中失败日志停在 Starting bounded session-ending best-effort cleanup，接着 Stopping core during session-ending best-effort cleanup，再写「通过服务停止核心 (IPC)」，之后没有成功、超时、回退或应用退出记录。大约四十六秒后生成 clash-verge.exe 的用户态转储。WinDbg 结果含 APPLICATION_HANG，主线程在 WaitOnAddress 上等待。",
+        "会话结束路径在议题里叫 bounded session-ending best-effort cleanup，交互退出叫 interactive cleanup。两条路径都会走到「通过服务停止核心 (IPC)」，差别是交互路径会继续写「服务成功停止核心」，会话结束路径则停住。因此不能用「平时退出是正常的」来排除关机故障。",
+        "判断依据：",
+        "1. 已安装 Clash Verge Service。\n2. 应用保持运行时直接关机或重启。\n3. Windows 一直等待 Clash Verge Rev 退出。\n4. 取消关机后，仍可用任务管理器结束 `clash-verge.exe`。",
+        "同一构建上，托盘交互退出能写到「服务成功停止核心」和 Application exited，通过服务停止核心大约二十一毫秒。交互退出正常、只有关机重启卡住，说明不是内核文件装坏，而是会话结束路径在等 IPC。议题中的复现步骤包括：安装服务、正常启动、必要时先开再关 TUN、确认服务仍安装、保持运行、再重启或关机。记录里 TUN 关闭、系统代理开启时仍出现。受影响版本包括 v2.5.2 以及当时的 AutoBuild，议题写 last known working 为 v2.5.1。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "关机前先托盘退出，已经转圈就结束进程",
+      "paragraphs": [
+        "预期结果：应在有限时间内停止核心并退出；若 Service IPC 无响应，待处理操作应被取消或超时，让 Windows 继续关机。实际结果：Clash Verge Rev 一直无响应并阻止关机。",
+        "可按议题现象和卸载说明分别处理：",
+        "1. 计划关机或重启前，先用托盘菜单退出，确认进程已结束，而不是只关窗口。\n2. 若已经转圈，先取消关机，在任务管理器结束 `clash-verge.exe`，再关机。\n3. 需要去掉服务时，卸载说明给出两条路：在软件设置菜单，虚拟网卡旁边点删除图标；或打开软件安装目录，进入 resource 文件夹，使用 cmd 运行 uninstall-service.exe。",
+        "判断依据：托盘退出后关机不再等待该应用，问题出在会话结束清理。结束进程只是让关机继续，不会自动修 IPC。议题评论建议使用当时最新的 autobuild 尝试，称对服务做了完全的重构，如还有问题请发新的 issue。这是处理建议，不是效果保证。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "删除服务和删除工作目录不是同一件事",
+      "paragraphs": [
+        "卸载说明把删除 service 和相关文件及目录分开写。Windows 上 WebView 缓存位于 Local 下的 `io.github.clash-verge-rev.clash-verge-rev`，工作目录和订阅位于 Roaming 下的同名目录。关机转圈时不要为了清干净而直接删 Roaming，那会动到 verge.yaml 和 profiles。",
+        "若只是不想在关机时走服务 IPC，按文档删除服务即可；删除服务不会自动卸载主程序。Linux 与 macOS 的 service 命令不要拿到 Windows 上用。Windows 就是设置里虚拟网卡旁删除，或运行 resource 里的 uninstall-service.exe。",
+        "判断依据：需要保留订阅就保留 Roaming；需要避免关机卡在 IPC，就先托盘退出或按文档删除服务。该议题状态为 closed。是否仍复现，以当前版本日志是否仍停在「通过服务停止核心 (IPC)」为准，而不是以是否重装过主程序为准。",
+        "资料：",
+        "https://github.com/clash-verge-rev/clash-verge-rev/issues/7725",
+        "https://www.clashverge.dev/uninstall.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

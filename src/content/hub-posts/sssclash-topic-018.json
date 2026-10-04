@@ -1,0 +1,55 @@
+{
+  "title": "Clash Meta 手机端（Android）：已有 VPN 时，Meta 为什么不能同时启用",
+  "description": "Clash Meta 手机端（Android）：已有 VPN 时，Meta 为什么不能同时启用。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-018",
+  "category": "故障排查",
+  "tags": [
+    "Clash Android VPN 冲突",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Android 把第三方隧道做成系统级 VpnService：每个用户（或工作资料）同一时刻只能有一个活动的 VPN 服务。Clash Meta 手机端只要通过系统 VPN 接口接管流量，就必须遵守这套模型。因此“已经有 VPN 时 Meta 不能同时启用”，不是客户端口号，而是平台约束：启动新的 VPN 服务会自动停止已有服务；同一时间也只有一个应用能处于已准备（prepared）状态。系统自带的 PPTP、L2TP/IPSec 属于另一套旧式客户端，和应用 VPN 同样会争用“当前这条隧道”的位置。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "为什么两条 VPN 不能叠在一起",
+      "paragraphs": [
+        "系统在首次激活前会弹出连接请求对话框，要求确认信任该 VPN。设置里的路径是 Settings > Network & Internet > VPN，已授权的应用会出现在列表中，并可配置系统选项或忘记该 VPN。连接活动时，快捷设置会给出信息面板，状态栏会出现钥匙图标。这些界面元素的判断意义很直接：钥匙图标在 Meta 启动前就存在、VPN 列表里另一个应用显示已连接、always-on VPN 已被占用，都说明当前用户已经有一条活动隧道。工作资料和个人用户可以各自运行不同 VPN 应用，但同一用户（或同一工作资料）内部不能两条应用 VPN 同时转发。always-on VPN 从 Android 7.0 起可由系统在开机后拉起并保持；若再打开“阻止不使用 VPN 的连接”，非这条隧道的流量会被系统丢掉，更不可能给第二个客户端留出口。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按系统状态而不是按应用内开关检查",
+      "paragraphs": [
+        "第一步，打开系统 VPN 页，记录是否已有应用处于已连接、always-on，或开启了阻止非 VPN 连接。第二步，看状态栏钥匙是否在 Meta 启动前出现。第三步，确认不是工作资料里的托管 VPN 在抢占。第四步，回忆是否刚从另一个客户端切换：系统会停旧启新，旧应用界面仍可能显示“已连接”，这不能当成两条隧道并存。第五步，从生命周期核对：应用需先调用准备授权，未授权或授权被撤销时，建立本地 TUN 接口会失败；活动中的服务还需要不可消除通知，停止时应结束服务本身，而不是只断开逻辑连接。有人在设置里断开、忘记 VPN，或关掉 always-on 时，系统会停止当前服务。判断依据是系统 VPN 页和状态栏，而不是 Meta 里某个开关的颜色。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "失败后的下一步",
+      "paragraphs": [
+        "必须改用 Meta 时：在系统 VPN 页面对原应用执行断开或忘记，并关闭其 always-on 以及“阻止不使用 VPN 的连接”。企业策略强制 always-on 时，个人应用无法并存，这是管理侧限制，改 Meta 规则文件无效。按应用放行或禁止列表只能过滤“哪些应用走当前这一条 VPN”，不能用来叠两条 VPN；列表还必须在接口建立之前设好，事后改列表只能重建连接。权限对话框曾被拒绝时，需要重新走准备授权。开发者文档见下面资料。",
+        "https://developer.android.com/develop/connectivity/vpn"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

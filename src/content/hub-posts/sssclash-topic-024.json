@@ -1,0 +1,57 @@
+{
+  "title": "Clash sniffer 嗅探配置适合解决哪些域名匹配问题",
+  "description": "Clash sniffer 嗅探配置适合解决哪些域名匹配问题。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "sssclash-topic-024",
+  "category": "配置教程",
+  "tags": [
+    "Clash sniffing",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "sniffer 用来从 HTTP、TLS、QUIC 流量里取出域名，让路由规则按域名匹配。它适合解决「连接只有 IP，或 redir-host 只看到映射结果，域名规则没有输入」这类缺口，不能代替规则本身，也不能当成通用优化项。资料里 enable 默认为 false，必须显式打开后，其余子项才会按嗅探逻辑工作。配置关系是：总开关、对何种流量强制嗅探、对哪些协议与端口嗅探、是否用结果覆盖目的地址、以及强制或跳过的域名与地址段。四类对象要分开改，才能判断到底补上了哪一种匹配失败。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "嗅探能补上的域名匹配问题",
+      "paragraphs": [
+        "force-dns-mapping 为 true 时，对 redir-host 类型识别的流量强制嗅探，适合规则写的是域名、入站侧却只有 host 映射结果的场景。parse-pure-ip 为 true 时，对所有未获取到域名的流量强制嗅探，适合目标是纯 IP、域名规则完全没有输入的场景。sniff 可分别写 HTTP、TLS、QUIC 的端口；HTTP 示例含 80 与 8080-8880，TLS 与 QUIC 示例含 443 与 8443。只有这些协议在对应端口上确实带有可解析域名时，嗅探才对域名规则有意义。",
+        "override-destination 控制是否用嗅探结果作为实际访问，全局默认 true，也可在某一协议下覆盖。判断依据：你需要域名规则命中并且连接改走嗅探到的名字时，才打开覆盖；若只想用嗅探结果做匹配、连接仍落到原 IP，应关掉覆盖，避免把「匹配到了」和「改写了目的地址」当成同一件事。force-domain 与 skip-domain 使用域名通配，用于必须嗅探或必须跳过的名字；skip-src-address 与 skip-dst-address 按 IP 段跳过，避免内网地址被卷进嗅探。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按场景配置与检查",
+      "paragraphs": [
+        "场景：系统代理下，域名规则偶尔命中，纯 IP 访问从不走域名策略。打开 enable，保留 parse-pure-ip，按实际监听端口填写 HTTP 与 TLS 的 ports，不要照抄未使用的端口范围。复现一次访问，看该流量是否从无域名变成有域名后再匹配。判断有效的标准是：同一目标在嗅探前后，规则命中由 IP 类规则变成域名类规则，而不是只看到开关已打开。",
+        "场景：redir-host 环境下规则总是按 IP 走。打开 force-dns-mapping，再观察是否还需要 parse-pure-ip。两者同时为 true 会扩大嗅探面，应按最小集合启用。场景：某一域名必须嗅探、某一设备名必须跳过。把前者写入 force-domain，后者写入 skip-domain；资料示例用 +.v2ex.com 强制嗅探，用 Mijia Cloud 跳过。家用设备名称、局域网服务名优先放进 skip-domain。来源或目标是固定主机时，用 skip-src-address 或 skip-dst-address，示例为单机 CIDR。检查时每次只改一类列表或一个协议的 ports。若 HTTP 嗅探后规则命中、TLS 未命中，应查 TLS 端口是否真经过该入站，而不是反复开关 enable。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "不适合的问题与失败后的下一步",
+      "paragraphs": [
+        "嗅探不能修复写错的规则集，也不能在未启用的协议上变出域名。QUIC 只有配置了 QUIC 且流量走对应端口时才有用。开启后目标被改到错误主机时，先把该协议的 override-destination 设为 false，或关掉全局覆盖，确认是覆盖目的地址造成的再决定是否保留。特定名称被错误匹配时，将该名称加入 skip-domain。内网地址被干扰时，用 skip-dst-address 排除。enable 仍为 false 时，不要解释为「嗅探已在工作」。若最小端口集合仍无域名输出，回到入站是否真是 HTTP 或 TLS，而不是继续扩大 force-domain。说明见 https://wiki.metacubex.one/config/sniff/ 。",
+        "资料：https://wiki.metacubex.one/config/sniff/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

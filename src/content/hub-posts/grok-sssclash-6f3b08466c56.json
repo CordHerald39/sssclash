@@ -1,0 +1,63 @@
+{
+  "title": "Clash TUN 的 stack 选 system、gvisor 还是 mixed，Windows 防火墙挡住后怎么放行",
+  "description": "Clash TUN 的 stack 选 system、gvisor 还是 mixed，Windows 防火墙挡住后怎么放行。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6f3b08466c56",
+  "category": "配置教程",
+  "tags": [
+    "Clash TUN stack system gvisor mixed Windows 防火墙",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "四种协议栈在电脑端怎么选",
+      "paragraphs": [
+        "Clash Verge Rev 在 Windows、macOS、Linux 开启 TUN 后，流量进入虚拟网卡，再交给 `stack` 指定的协议栈。名词解释写明：TUN 模式的默认堆栈是 GVisor；使用 TUN 需要自行对系统防火墙放行内核 verge-mihomo 和 verge-mihomo-alpha。",
+        "内核文档的可用值为 system、gvisor、mixed、mips。",
+        "system 使用系统协议栈，文档写明更稳定、更全面，占用相对其他堆栈更低。把稳定性、资源占用放在前面时用它。",
+        "gvisor 在用户空间实现网络协议栈，提供更高安全性和隔离性，并减少内核与用户空间切换。文档仅说明特定情况下网络处理可能更好，不能当成普遍加速。",
+        "mixed 为混合堆栈，TCP 使用 system，UDP 使用 gvisor，文档称使用体验可能相对更好。若当前没有兼容问题，建议用 mixed：TCP 走系统栈，UDP 走 gvisor。",
+        "mips 使用 mihomo 自研的 IP 协议栈，不要和 mixed 当成同一实现。",
+        "判断依据：先确认 TUN 已启用。默认 gvisor 能工作且无异常时，改为 mixed。出现兼容问题或需要更低占用时改 system。只有要自研栈时才选 mips。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "按故障现象改 stack",
+      "paragraphs": [
+        "只开系统代理时，stack 不参与入站，先启用 TUN。网页正常而 UDP 应用异常时，从 gvisor 改为 mixed。TUN 能启动但和虚拟机、安全软件冲突时，改 system。防火墙打开后 system 或 mixed 立刻不可用，则进入下一节放行内核，不要先换节点。",
+        "```yaml\ntun:\n  enable: true\n  stack: mixed\n```",
+        "把 mixed 换成 system、gvisor 或 mips。改完后检查三项：虚拟网卡是否存在，TCP 与 UDP 是否都能出站，防火墙是否仍拦截内核。macOS 的 device 只能使用 utun 开头的网卡名，前缀错误时协议栈不会进入工作状态。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "防火墙挡住后如何放行内核",
+      "paragraphs": [
+        "文档写明：如果打开了防火墙，则无法使用 system 和 mixed 协议栈，必须放行内核。Clash Verge Rev 还要求放行 verge-mihomo 与 verge-mihomo-alpha。",
+        "Windows：设置 → Windows 安全中心 → 允许应用通过防火墙 → 选中内核。判断依据是放行的可执行文件就是当前拉起的 verge-mihomo 或 verge-mihomo-alpha，而不是只放行图形界面。",
+        "macOS：防火墙默认放行签名软件，一般无需配置。若开启防火墙后无法使用：系统设置 → 网络 → 防火墙 → 选项 → 添加 mihomo。判断依据是防火墙开启与 system/mixed 不可用同时出现。",
+        "Linux：防火墙默认通常不拦截应用。若开启后无法使用，放行 TUN 网卡出站。文档假设网卡名为 Mihomo：",
+        "```bash\nsudo iptables -A OUTPUT -o Mihomo -j ACCEPT\n```",
+        "必须换成实际网卡名。判断依据是 OUTPUT 链允许该网卡出站。放行后重新启用 TUN；若仍失败，先用 gvisor 确认网卡可用，再切回 system 或 mixed。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://wiki.metacubex.one/en/config/inbound/tun/\nhttps://www.clashverge.dev/guide/term.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}
