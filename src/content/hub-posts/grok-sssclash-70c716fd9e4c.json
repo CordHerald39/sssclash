@@ -1,0 +1,59 @@
+{
+  "title": "Clash Verge Rev 电脑端：全局覆写合并多订阅，未选中的为什么全 timeout",
+  "description": "Clash Verge Rev 电脑端：全局覆写合并多订阅，未选中的为什么全 timeout。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-70c716fd9e4c",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge 合并多订阅 timeout",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Verge Rev 电脑端只会把当前激活的那一份配置交给内核。全局扩展里即使写了 proxy-providers，这些提供者仍然依附你此刻选中的配置，并不会把首页其它远程订阅卡片里的节点一并送进内核。未选中的集合测速全红、全部 timeout，首先说明配置没有加载，而不是节点坏了。应按官方多订阅示例做成一份本地 YAML 并启用它，不要靠来回点多张订阅卡片。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "未选中的提供者为什么全是 timeout",
+      "paragraphs": [
+        "首页可以同时列出多张订阅，但内核同一时刻只运行一份。远程订阅卡片互相独立，只有被选中的那张会进入解析、合并和校验。扩展的执行顺序是：订阅原文、应用设置、全局扩展配置、全局扩展脚本、订阅扩展配置、订阅扩展脚本，最后由应用把接管字段写回。全局扩展适合放置大多数订阅都要生效的项；写在全局扩展里的 proxy-providers 只是叠加在当前这份配置上，不会去扫描未激活的卡片。",
+        "判断时做对照：选中带提供者的本地配置，集合能够更新、延迟能出现数字；切换到另一张普通远程订阅后，同一批集合变红或 timeout。这表示当前运行配置里没有这些提供者路径，内核无从测速。它和节点握手失败不是同一类问题。扩展对列表字段是整体替换，更不能指望点一下远程卡片就自动并入全局提供者。全局扩展与订阅扩展会同时生效，顺序固定。若把提供者只写在全局扩展，却选中一份并未引用这些提供者的远程订阅，内核里仍然没有可测节点。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按官方多订阅示例做成一份本地 YAML",
+      "paragraphs": [
+        "官方多订阅合并案例把文件分成两块。上半段用 proxy-providers 编排多个 http 类型提供者，每项包含 type、本地 path、url、interval，以及 override 中的 additional-prefix，用前缀区分来源、避免节点重名。订阅地址不要写成完整网址，需要占位时只保留 token=示例 这类参数片段。下半段再写端口、dns、proxy-groups 和 rules。代理组可以使用 select 或 url-test，并用 include-all 收编各提供者节点；规则再用 GEOSITE、GEOIP 和 MATCH 指向这些组。官方案例把提供者、分组、规则放在同一文件，就是为了让这三部分一起被加载。",
+        "```yaml\nproxy-providers:\n  provider1:\n    type: http\n    path: ./proxy_provider/p1.yaml\n    # url 填写自有订阅，示例仅保留 token=示例\n    interval: 21600\n    override:\n      additional-prefix: \"p1 |\"\n```",
+        "这份文件应保存为本地配置，并作为唯一启用入口。远程卡片只代表各自的订阅原文，未选中就不会把节点送进内核。需要多家节点同时在线时，以这一份本地配置为准，而不是轮流激活多张远程卡片。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "启用步骤与核对依据",
+      "paragraphs": [
+        "典型场景是家里同时用两家订阅，把 proxy-providers 写进全局扩展后，以为首页两张卡片都能测速。实际只有当前启用的那份配置进入内核，另一张卡片对应的集合从未加载，延迟列自然全部 timeout。正确步骤如下。第一步，新建本地配置，按官方格式写入多个提供者，path 指向各自缓存文件，interval 使用文档中的秒级周期。第二步，检查全局扩展是否重复定义了同名提供者；提供者列表放在本地 YAML，全局扩展只覆写 dns、tcp-concurrent 等公共字段。可右键配置卡片进入扩展编辑器，确认只写出需要改的字段。第三步，首页只选中这份带提供者的本地配置并保持启用，等待提供者按 interval 拉取。第四步，只对当前配置做延迟检测。",
+        "若仍然全是 timeout，先确认首页激活的是不是那份本地配置，再看 path 是否指向已生成的提供者文件，最后才怀疑节点失效。未选中全红时，优先当作配置没加载，而不是去改规则或关闭校验。扩展只改写出的字段，没写的字段保持不变，因此不要把全局扩展理解成给所有卡片灌节点。",
+        "https://www.clashverge.dev/guide/config.html\nhttps://www.clashverge.dev/guide/extend.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

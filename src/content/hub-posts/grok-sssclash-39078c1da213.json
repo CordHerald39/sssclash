@@ -1,0 +1,55 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：TUN 和 Tailscale 一起开，curl 谷歌为什么空回复",
+  "description": "Clash Verge Rev 电脑端（macOS）：TUN 和 Tailscale 一起开，curl 谷歌为什么空回复。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-39078c1da213",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev TUN Tailscale 冲突",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "空回复先当路由冲突",
+      "paragraphs": [
+        "macOS 上同时打开 Clash Verge Rev 的 TUN 和系统里的 Tailscale 时，`curl` 访问谷歌一类公网站点得到空回复，访问 `100.x` 却通；关掉 Tailscale 后 TUN 又能出国。这是两套虚拟网卡抢默认路由，不要先当节点故障。TUN 在 `auto-route` 开启时会把全局流量导入虚拟网卡，macOS 上 `device` 只能使用 `utun` 开头的名称。Tailscale 也会建立自己的接口，并宣告 `100.64.0.0/10` 以及可能的子网路由。两边都想当默认出口时，公网 TCP 被送到错误协议栈，表现为空回复；CGNAT 地址仍走 Tailscale，所以 `100.x` 正常。",
+        "判断用三次对照。只开 TUN：公网正常。只开 Tailscale：`100.x` 正常，公网取决于你是否使用 exit node。两者同时开：公网空回复，`100.x` 仍通。能稳定复现这组对照，就不要先换节点、重装订阅。`auto-detect-interface` 只解决「从哪块物理网卡出站」，解决不了两块虚拟网卡同时改默认路由。",
+        "`strict-route`、`dns-hijack` 会加强 TUN 接管。双开出现空回复时，先把问题定义成路由表冲突，而不是 DNS 单独坏了。公网空回复与「第一次访问 Tailscale 出站超时」也不同：后者是该出站按需加载，重试即可；前者是系统 VPN 与 TUN 叠在一起抢路。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "把 100.64.0.0/10 排除出 TUN",
+      "paragraphs": [
+        "要让公网继续走 Mihomo、Tailscale 网段留在其虚拟接口，在 TUN 配置把 `100.64.0.0/10` 写入 `route-exclude-address`。该项在 `auto-route` 启用时排除自定义网段，使匹配前缀不进 TUN。不要只排除单个 `100.64.0.1/32`，否则其它 Tailscale 节点仍会被 TUN 抢走。家庭或实验室局域网也可以一并排除，避免虚拟网卡吞掉内网。",
+        "`route-address` 会在启用 `auto-route` 时改写要接管的网段。若排除后 `100.x` 仍进 TUN，检查是否还有更宽的 `route-address` 把默认路由又加回去。macOS 上把 `device` 改成另一个 `utun` 名称不会消除双栈抢路由。`stack` 可在 `system`、`gvisor`、`mixed`、`mips` 之间选择，它改变的是 TUN 内部协议栈，不是 Tailscale 接口是否还在改默认路由。",
+        "改完后验证：访问 `100.x` 仍走 Tailscale 路径；公网 `curl` 不再空回复，且出口是 Mihomo 而不是 Tailscale 的 exit node。若排除地址后公网恢复、`100.x` 中断，说明排除前缀写错或过宽，只保留 `100.64.0.0/10` 再试。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改用内核 Tailscale 出站",
+      "paragraphs": [
+        "另一条路是关掉系统里的 Tailscale，改为在 Mihomo 里声明 `type: tailscale` 的出站，用规则把 `100.64.0.0/10` 打到该出站，公网仍走普通代理组。Tailscale 与其它协议一样，只有规则、策略组命中才会连接，不会在内核启动时同步拉起。控制面、DERP、STUN 等可通过 `dialer-proxy` 走已有节点。`accept-routes` 决定是否接受 Tailnet 发布的子网路由；`exit-node` 指定出口节点，目标不在 Tailscale 路由内时会直接失败，不会回落直连。要访问公网，需要可用的 exit node，或接受覆盖目标网段的子网路由。",
+        "不要让 TUN 全局接管再加上一层系统 VPN。两套都改默认路由时，空回复会反复出现。选定一种模型后做对照：排除 `100.64.0.0/10` 后双开是否恢复公网；或停掉系统 Tailscale、只用内核出站时，`100.x` 与公网是否各走各路。",
+        "https://wiki.metacubex.one/config/inbound/tun/\nhttps://wiki.metacubex.one/en/config/proxies/tailscale/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：IPv6 DNS 超时后为什么不改用 IPv4",
+  "description": "Clash Verge Rev 电脑端（Windows）：IPv6 DNS 超时后为什么不改用 IPv4。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-b34308544db2",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge IPv6 DNS 不回退",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "双栈超时不等于会改用 IPv4 解析器",
+      "paragraphs": [
+        "Windows 上 Clash Verge Rev 走 mihomo 的 DNS 配置，查询顺序以配置为准。nameserver、fallback 或系统解析器若首先使用不可达的 IPv6 地址，lookup 会在该地址上卡到 i/o timeout。内核不会因为一次超时就把列表改写成 IPv4。把双栈理解成操作系统那种失败再试，会误判为规则或节点故障。",
+        "手册中 ipv6 的含义是：是否解析 IPv6；为 false 时回应 AAAA 的空解析。它改变的是给客户端的 AAAA 答案，不是上游服务器连不上就换 IPv4。default-nameserver 必须是 IP，用来解析 DNS 服务器自己的域名。这里若放了不可达 IPv6，加密 DNS 的主机名都解析不完，后面的 nameserver 列表不会被用到。cache-algorithm 只影响缓存淘汰，不会在超时后切换地址族。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "核对 AAAA 是否真的被回空",
+      "paragraphs": [
+        "每次只改一处：\n1. 确认 dns.enable 为 true。false 时使用系统 DNS，ipv6 与 nameserver 都不生效。\n2. 设置 ipv6 为 false，查询同一主机 AAAA。按文档应得空解析，客户端应改用 A 记录继续连接。\n3. 若 AAAA 仍返回地址，说明查询没进内核（listen 未接管，或应用没用系统解析）。listen 示例为 0.0.0.0:1053，需与系统 DNS 指向一致才能观察。\n4. 检查 default-nameserver、nameserver、fallback 有没有 IPv6 字面量。去掉不可达项，保留可达 IPv4 或已确认的 DoH。\n5. 单条服务器可用附加参数 disable-ipv6 丢弃 AAAA。它与顶层 ipv6: false 作用点不同，不要在 ipv6: true 时以为已经全局关闭 IPv6。",
+        "判断依据：同一域名，ipv6 为 false 时 AAAA 为空且 A 成功；为 true 时出现 AAAA 或卡在超时。超时若发生在解析 DNS 服务器域名阶段，优先查 default-nameserver。fallback-filter 的 geoip、ipcidr、domain 只判断结果是否污染，不负责上游 IPv6 连通。Windows 适配器上若还留着失效的 IPv6 DNS，当 enable 为 false 时应先修系统顺序；为 true 时以内核配置为准，不要两套同时改。",
+        "```yaml\ndns:\n  enable: true\n  ipv6: false\n  prefer-h3: false\n  listen: 0.0.0.0:1053\n  default-nameserver:\n    - 223.5.5.5\n  nameserver:\n    - https://doh.pub/dns-query\n  enhanced-mode: fake-ip\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把 DoH、prefer-h3 和业务双栈分开看",
+      "paragraphs": [
+        "prefer-h3 表示 DoH 优先 HTTP/3，附加参数 h3 会强制用 HTTP/3 建 DoH。上游 UDP/443 不可达时，超时很像 IPv6 故障，其实是传输协议问题。respect-rules 让 DNS 连接遵守路由，手册强烈不建议与 prefer-h3 一起使用，并要求配置 proxy-server-nameserver，避免先连代理再解析代理域名的鸡蛋问题。direct-nameserver 只用于 direct 出口的域名，不填则遵循 nameserver-policy、nameserver 与 fallback。",
+        "enhanced-mode 的 fake-ip 与 redir-host 只决定如何把解析结果交给连接，不会在 IPv6 上游超时后替你切换 IPv4 解析器。需要双栈业务解析时，应保证至少一条 IPv4 上游能在超时前响应，并把 default-nameserver 写成可达 IP。ipv6: false 只吞掉给客户端的 AAAA，不修复上游 IPv6 不可达。附加参数 disable-ipv4 会丢弃 A 回应，与本次降级目标相反，排查期间不要打开。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

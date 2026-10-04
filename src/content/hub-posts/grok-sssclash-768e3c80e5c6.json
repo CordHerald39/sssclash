@@ -1,0 +1,57 @@
+{
+  "title": "Clash 电脑端：嗅探覆盖目标后节点域名被解析成假 IP 怎么处理",
+  "description": "Clash 电脑端：嗅探覆盖目标后节点域名被解析成假 IP 怎么处理。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-768e3c80e5c6",
+  "category": "故障排查",
+  "tags": [
+    "Clash 嗅探覆盖目标 节点连不上",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "电脑端开启嗅探且 override-destination 生效后，内核会丢掉连接上原来的目的 IP，改用嗅探到的主机名重新解析再出站。若 enhanced-mode 是 fake-ip，而节点自己的域名又没有进入 fake-ip-filter，这次重解析可能拿到假 IP，流量再次回到本机嗅探或 TUN，形成回环：面板里节点还在，业务表现为握手失败、卡在连接中或 DNS 异常。处理重点不是换协议，而是停止对节点主机名做“覆盖后再解析”，或者让节点域名不要进入假 IP 映射。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先分清覆盖目标与假 IP 回环",
+      "paragraphs": [
+        "打开日志，找“嗅探到主机名之后立刻去解析该主机名”的记录。判断依据：原目的是节点的真实 IP 或此前已经解析好的地址；嗅探结果恰好等于某个 proxies.server 主机名；随后 DNS 回答落在 fake-ip-range 文档示例所用的 198.18.0.1/16 这类映射段。若同时看到同一连接反复进出 TUN，就可以认定为回环，而不是线路丢包。文档把 override-destination 解释为是否使用嗅探结果作为实际访问，默认按 true。覆盖发生后，路由和 DNS 都只看见新主机名。fake-ip-filter 的说明是：列表里的地址不会下发 fakeip 映射用于连接。filter 未命中时，节点域名也会得到假 IP。内核再去连这个假 IP，等于把“连节点”变成“连本机假地址”，嗅探可能再次读到同样 SNI，于是循环。fake-ip-filter-mode 默认 blacklist，表示名单内才用真 IP；改成 whitelist 则只有命中才给假 IP，写错模式会让排除项完全反过来。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "两条互不替代的改法：排除假 IP 或跳过嗅探",
+      "paragraphs": [
+        "先不要改节点端口和协议。第一种改法针对 DNS。在 dns 段确认 enable 为 true、enhanced-mode 为 fake-ip，然后把所有节点主机名以及常用 CDN 后缀按域名通配写进 fake-ip-filter，例如节点的完整域名和对应后缀。这样这些名字会返回真实 IP，覆盖后的重解析也不会进 198.18.0.0/8。第二种改法针对嗅探。在 sniffer 里把节点主机名写入 skip-domain，或把节点 IP 写入 skip-dst-address，让内核不要对连节点的那一跳做嗅探覆盖。两种改法可以同时存在：filter 负责“就算解析也不给假 IP”，skip-domain 负责“根本不要用嗅探结果当目的”。不要指望只靠把全局 override-destination 改成 false 就一劳永逸，因为 sniff.HTTP 示例里可以单独再写成 true，协议级覆盖仍会丢掉原 IP。parse-pure-ip 为 true 时，连只有 IP、没有域名的流量也会被强制嗅探，节点若以 IP 连接仍可能被读出 SNI，所以跳过列表对纯 IP 节点同样有意义。",
+        "```yaml\ndns:\n  enable: true\n  enhanced-mode: fake-ip\n  fake-ip-range: 198.18.0.1/16\n  fake-ip-filter-mode: blacklist\n  fake-ip-filter:\n    - '*.lan'\nsniffer:\n  enable: true\n  override-destination: true\n  skip-domain:\n    - your-node.example\n```",
+        "上面 filter 里的局域网通配来自 DNS 文档示例；节点名请换成订阅里真实的 server 字段，不要编造带协议头的网址。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "重载后用解析结果而不是网速判断是否修好",
+      "paragraphs": [
+        "保存并重载后，对节点域名做一次由内核接管的查询，再拨一次该节点。修复成立的依据：该主机名不再落入 fake-ip-range；出站日志里的目的 IP 是运营商或机房地址，而不是 198.18 开头；同一连接不会反复被嗅探改写。若主机名仍是假 IP，检查 filter 模式是否被改成 whitelist 却只写了排除项，或规则模式 fake-ip-filter-mode: rule 下最后一条 MATCH 仍指向 fake-ip。respect-rules 与代理侧 DNS 是另一条链路，修回环时不要先去改 nameserver 列表，以免把节点解析和业务解析搅在一起。force-domain 里不要加入节点主机名，那会强制嗅探，正好把覆盖开关打开。结论：覆盖目标会触发重解析，假 IP 未排除时就会回环；把节点主机名移出假 IP 或跳过嗅探，才能让出站重新落到真实地址。",
+        "https://wiki.metacubex.one/config/sniff/\nhttps://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

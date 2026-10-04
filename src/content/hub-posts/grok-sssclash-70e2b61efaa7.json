@@ -1,0 +1,61 @@
+{
+  "title": "Clash Verge Rev 电脑端：更新订阅报 302 Found，浏览器却能打开",
+  "description": "Clash Verge Rev 电脑端：更新订阅报 302 Found，浏览器却能打开。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-70e2b61efaa7",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge 订阅 302",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Verge Rev 电脑端更新订阅时若报 302 Found，而浏览器能打开同一地址，多半不是订阅过期，而是跳转没有被跟随。客户端可能把 302 当成失败，不一定读取 Location 再去拉最终内容。PowerShell 带 FollowRelLink，或 curl -L 这类会跟随重定向的请求，往往能拿到 YAML；软件里仍失败，说明差异在是否跟随跳转。应改用最终直链，或让网盘、短链关闭跳转，再用官方核对方法确认返回的是 YAML 而不是 HTML。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "302 和浏览器表现为什么不一致",
+      "paragraphs": [
+        "浏览器默认跟随重定向，最终可能看到配置文本或下载文件。客户端更新订阅是一次 HTTP 拉取，对 302 Found 的处理更严格，不一定继续请求 Location。网盘分享、短链、落地页常用 302 把流量转到真实文件；中间页若是 HTML，客户端也会当失败。判断依据是：浏览器地址栏最终停在另一条地址，而客户端日志停在 302；或浏览器能另存为 yaml，客户端报更新失败。这不能直接当成账号过期。",
+        "User-Agent 也会影响服务端下发内容。订阅服务商通过请求头里的 UA 判断客户端类型，从而给出不同正文。官方说明里验证时应带 clash-verge 的 UA，避免拿到给浏览器的 HTML 页面。页面能打开只说明解析和证书没有挡住访问，不说明重定向策略和 UA 满足客户端更新逻辑。短链若把统计页插在 302 后面，跟随后若仍是 HTML，同样不能当配置解析。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用官方方法核对返回内容",
+      "paragraphs": [
+        "在 Windows PowerShell 中，先把订阅链接赋给变量，再发带 UA 的 GET，并开启跟随相对链接：",
+        "```\n$sub = '在单引号内粘贴订阅链接,input subscription link'\nInvoke-RestMethod -UserAgent 'clash-verge/v2.4.0' -Method get -FollowRelLink -uri $sub\n```",
+        "也可以使用：",
+        "```\ncurl -A clash-verge/v2.4.0 '引号内粘贴订阅链接'\n```",
+        "判断标准：命令返回的是正常的 YAML 格式 Mihomo 配置，而不是 HTML。若命令跟随跳转后能得到 YAML，客户端仍报 302，即可认定是软件侧未跟随 Location。若命令本身也停在 HTML 落地页，应在浏览器中复制跳转完成后的最终地址，再把最终直链导入客户端。订阅示例不要编造域名，需要演示参数时只写 token=示例 这类片段。核对时不要把浏览器里的说明文案和客户端需要的配置正文混为一谈。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "处理步骤与排除过期误判",
+      "paragraphs": [
+        "第一步，用上面的 UA 拉一次，看响应是 YAML 还是 HTML，状态是否停留在 302。第二步，若存在跳转，向网盘或短链服务关闭跳转，或只把最终直链填进客户端。第三步，再在客户端更新一次，日志应不再以 302 Found 结束。第四步，若直链加上正确 UA 仍不是 YAML，再去联系提供方，而不是先改系统代理或 TUN。",
+        "系统代理和 TUN 决定本机流量如何进入内核：前者靠程序自发读取约定位置，后者靠虚拟网卡重定向。它们都不负责订阅更新是否跟随 HTTP 重定向。规则模式、全局模式、直连模式管的是出站匹配，同样解释不了 302。把 302 当成过期去续费，或反复重装客户端，都没有对准「跳转没跟」这个原因。核对永远以 clash-verge 的 UA 拉到的正文为准：是 YAML 才能导入，是 HTML 就继续要直链。",
+        "https://www.clashverge.dev/guide/term.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

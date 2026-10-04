@@ -1,0 +1,53 @@
+{
+  "title": "Clash Meta 手机端（Android）：工作资料里的流量为什么回不到主空间",
+  "description": "Clash Meta 手机端（Android）：工作资料里的流量为什么回不到主空间。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-ef69d0865439",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta 工作资料 连不上",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "工作资料里的 VPN 只管该用户",
+      "paragraphs": [
+        "Android 的 VPN 接口把某一个用户或工作资料的系统网络接到网关。每个用户（或工作资料）可以运行不同的 VPN 应用，并且每个用户或资料在同一时间只有一个活动服务，启动新的会停掉旧的。因此，在工作资料里打开 Clash Meta，只覆盖该资料内的应用流量，不会自动变成主空间的全局隧道。",
+        "判断时不要只看状态栏出现钥匙图标就下结论。应分别打开主用户与工作资料的 VPN 设置页：活动连接属于哪一个用户，就只接管那一个用户。主空间的浏览器、应用商店若仍走蜂窝或普通 Wi-Fi，说明流量从未进入工作资料里的 VpnService。把工作资料当「系统级全局代理」是对用户隔离模型的误读。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "跨用户回环被拦截时会看到什么",
+      "paragraphs": [
+        "Clash Meta for Android 在清单中声明了 INTERACT_ACROSS_USERS，注释写明这是 Android 17 及以上跨资料回环网络限制的变通：允许本应用去连接同一应用在不同资料中绑定的回环地址和端口；该权限只能通过 ADB 授予。未授权时，副用户里的 VPN 不能再把流量转到主空间已监听的端口。",
+        "可对照这些现象：服务只安装并运行在工作资料；主空间一侧看不到来自工作资料的入站；同一应用在两个资料各有一份进程，访问 127.0.0.1 上由另一资料绑定的端口失败；系统版本偏新。若节点、DNS、规则都正常，却只有「资料之间的环回失败」，应优先怀疑该限制。清单同时把该权限标为受保护权限，系统设置里没有对应开关，应用也不能在运行时自行弹出授权框。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用 ADB 授予权限的步骤与验收",
+      "paragraphs": [
+        "1. 打开开发者选项并启用 USB 调试，由电脑用 ADB 连接这台设备。\n2. 查出 Clash Meta 实际安装的包名，区分主用户与工作资料中的安装实例，不要使用未安装的名称。\n3. 向该包名授予 android.permission.INTERACT_ACROSS_USERS。授权失败时先检查是否连对设备、包名是否属于当前用户，以及系统是否拒绝受保护权限。\n4. 授予成功后，停掉两个资料中的相关服务再启动，让监听套接字在新权限下重新绑定。旧进程不会自动继承这次授权。\n5. 再测工作资料访问主空间同一应用绑定的回环地址和端口：应能建立连接，且主空间一侧出现对应流量。",
+        "若授权成功而跨资料环回仍失败，回到文档前提：每个资料仍然是独立的 VpnService 生命周期。INTERACT_ACROSS_USERS 只放行回环互通，并不把两个用户合并成一次 VPN。验收时在两个用户的 VPN 页面分别查看是否各有一条连接，避免把「资料隔离」误当成「权限没给上」。需要主空间也走代理时，应在主空间单独准备服务，而不是指望工作资料里的隧道穿透用户边界。",
+        "https://github.com/MetaCubeX/ClashMetaForAndroid/blob/main/app/src/main/AndroidManifest.xml\nhttps://developer.android.com/develop/connectivity/vpn"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

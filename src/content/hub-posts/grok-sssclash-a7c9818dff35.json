@@ -1,0 +1,63 @@
+{
+  "title": "Clash Verge Rev 电脑端：开机自启后校园网认证页出不来，要不要先关 TUN",
+  "description": "Clash Verge Rev 电脑端：开机自启后校园网认证页出不来，要不要先关 TUN。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-a7c9818dff35",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge 校园网认证页打不开",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "开机自启后连上校园网，认证页出不来，节点也是红的。校园网门户是未认证阶段由网关劫持 HTTP 的 captive portal，探测包必须打到学校未认证网关。TUN 打开 `auto-route` 后默认路由指向虚拟网卡，系统探测进了内核到不了网关，操作系统要么以为已经联网，要么一直转圈。要先停虚拟网卡再登录，而不是换节点。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "认证流量必须直达未认证网关",
+      "paragraphs": [
+        "名词解释里：系统代理靠应用自己去读约定位置；TUN 则建虚拟网卡，用操作系统路由把已经发出的请求重定向进去，不依赖开发者是否遵守代理约定。校园网探测、部分连通性检查属于后一类，会被虚拟网卡接走。",
+        "判断依据：",
+        "1. 不运行客户端时能弹出认证页；自启并打开 TUN 后门户出不来。\n2. 换节点、在规则/全局/直连之间切换都不出现门户。直连模式只改出站，入站仍先进入 TUN。\n3. 关掉 TUN 或退出后认证页出现。",
+        "步骤：",
+        "1. 开机若已自启，先关 TUN，不要先测延迟。\n2. 用浏览器访问任意 http 站点或学校门户，完成登录。\n3. 能访问外网后再开 TUN。",
+        "服务模式只解决非管理员拉起 TUN 的权限，不会在开机时自动避开 captive portal。自启和 TUN 同时打开的机器，每次连校园网都要重复「先停虚拟网卡」。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "停的是虚拟网卡，不是先关系统代理",
+      "paragraphs": [
+        "系统代理关不掉这类门户：探测经常不读系统代理约定。抢走默认路由的是 `auto-route`。",
+        "1. 关闭 TUN，确认隧道断开，默认路由回到校园无线或有线网卡。\n2. 不要只切直连模式。出站 DIRECT 不等于请求没进虚拟网卡。\n3. 认证期间保持 `auto-route` 停用，登录完成再启用。\n4. 自启若同时打开系统代理和 TUN，认证阶段以停 TUN 为准；若学校要求浏览器必须直连网关，再临时关系统代理。",
+        "TUN 文档在 Android 上可用 `exclude-package` 排除 `com.android.captiveportallogin`。电脑端没有同样的包名开关，不能把该字段抄进 Windows 或 macOS 配置当做法。电脑上就是停 TUN，或在路由里排除认证相关网段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "登录完成再开 auto-route，并排除校园网段",
+      "paragraphs": [
+        "1. 确认已获得认证后的地址，校外网站可开。\n2. 再启用 TUN 与 `auto-route`。认证后仍要访问的门户或学校 DNS，用规则指到 DIRECT；校园管理网段可写入 `route-exclude-address`，减少管理地址进隧道。\n3. 之后开机顺序固定为：系统先连上校园网并完成门户，再允许 TUN 拉起。不要用换节点验证「是不是订阅挂了」——未认证时网关会拦截出站，节点全红是连带现象。\n4. `strict-route` 会让部分不支持的网络不可达，认证阶段不要打开。`dns-hijack` 同样会把门户相关 DNS 拉进内核，认证没结束前少用。",
+        "先保证未认证流量能打到网关，再谈严格路由。自启和 TUN 可以并存，但顺序必须是先认证、后接管默认路由。",
+        "资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://www.clashverge.dev/guide/term.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

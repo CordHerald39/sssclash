@@ -1,0 +1,60 @@
+{
+  "title": "Clash Verge Rev 电脑端：开 TUN 后 Tailscale MagicDNS 解析不了怎么办",
+  "description": "Clash Verge Rev 电脑端：开 TUN 后 Tailscale MagicDNS 解析不了怎么办。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-2ec77a3a302e",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev Tailscale MagicDNS",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "开 TUN 之后 Tailscale MagicDNS 失效，最常见的误判是只排除了 `100.64.0.0/10`。把这段 CGNAT 放进直连或 `route-exclude-address`，只能让 `100.x` 主机少绕一圈，解决不了名称查询。MagicDNS 要把查询送到 `100.100.100.100`。TUN 的 `dns-hijack`（例如 `any:53`）会把 53 端口请求送进内核 DNS；查询一旦被截走，后面再写 `nameserver-policy` 也接不住那条已经被劫持的报文。关掉 DNS 覆写有时能通，但等于把解析交回系统，长期会泄漏，不能当正式方案。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "用对照实验区分劫持和出站未就绪",
+      "paragraphs": [
+        "按下面顺序做，避免一上来换节点。",
+        "1. 确认配置里已声明 `type: tailscale` 的出站，且只有被规则或策略组点到时才会走它。文档写明它是可选节点，控制面不会和内核同步拉起，第一次访问超时可以再试，这和「名字永远解析不了」不是一类问题。\n2. 关掉 TUN，保留 Tailscale 与系统代理或直连，解析 tailnet 域名。此时正常，说明 MagicDNS 服务可用。\n3. 再开 TUN，同一域名失败，而 `100.x` 地址有时仍通：按 DNS 劫持处理，不要当成节点全红。\n4. 核对 `ts://` 后面的名字与出站 `name` 是否一致；写错时策略等于没有解析器。",
+        "判断依据：只在 TUN 开启时失败、停覆写或停劫持后恢复、IP 直连尚可——改 DNS 路径，不改代理组。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "给 MagicDNS 单独指定解析器并写入 fake-ip-filter",
+      "paragraphs": [
+        "DNS 类型里的 `ts://` 会使用指定 Tailscale 出站的 DNS 配置查询，也可以把策略指到 `100.100.100.100`。相关域名不能进 fake-ip 池，否则名称看起来解析了，实际拿到的是虚假地址，连不进 tailnet。",
+        "1. 在 `proxies` 增加唯一 `name` 的 tailscale 出站。需要 UDP 或子网路由时打开 `udp`、`accept-routes`。`dialer-proxy` 和 `interface-name` 管控制面出网，不管 53 端口是否被 hijack。\n2. 在 `nameserver-policy` 把 MagicDNS 后缀（如 `*.ts.net` 和你们的短名）指到 `ts://<出站名>` 或 `100.100.100.100`。\n3. 同一批域名和 `100.100.100.100` 写入 `fake-ip-filter`。\n4. 排除 `100.64.0.0/10` 挡不住 `100.100.100.100:53` 匹配 `any:53`。",
+        "```yaml\ndns:\n  enable: true\n  enhanced-mode: fake-ip\n  fake-ip-filter:\n    - \"*.ts.net\"\n    - \"100.100.100.100\"\n  nameserver-policy:\n    \"*.ts.net\": \"ts://tailscale\"\nproxies:\n  - name: \"tailscale\"\n    type: tailscale\n    udp: true\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "关 DNS 覆写只用于验证",
+      "paragraphs": [
+        "关闭覆写后，查询可能回到系统解析器，MagicDNS 有时会恢复。这只能证明内核截了 53 端口。TUN 开启时系统解析容易泄漏，也绕过分流。验证完应打开覆写，用 `ts://` 或 `100.100.100.100` 策略，并保留 `fake-ip-filter`。",
+        "`route-exclude-address` 排除 Tailscale 网段只减少路由环路。`auto-detect-interface` 选错网卡会让控制面失败，要和名称劫持分开看。未过滤的 MagicDNS 名称若走进 fake-ip，还会表现为“有解析、连不上”，排查时不要和劫持失败混为一谈。",
+        "资料：\nhttps://wiki.metacubex.one/en/config/dns/type/\nhttps://wiki.metacubex.one/en/config/proxies/tailscale/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

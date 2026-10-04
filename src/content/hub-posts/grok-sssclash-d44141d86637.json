@@ -1,0 +1,53 @@
+{
+  "title": "Clash Verge Rev 电脑端：Clash for Windows 的 Mixin 能不能直接贴进扩展配置",
+  "description": "Clash Verge Rev 电脑端：Clash for Windows 的 Mixin 能不能直接贴进扩展配置。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-d44141d86637",
+  "category": "配置教程",
+  "tags": [
+    "Clash for Windows mixin 迁移 Verge",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Mixin 多包了一层键，扩展配置写的是顶层字段",
+      "paragraphs": [
+        "Clash for Windows 的 Mixin 通常把要混入的内容放在 `mixin:` 这一层键下面，再由客户端展开。Clash Verge Rev 的扩展配置直接写顶层字段，用 YAML 做覆写或合并，并不把外层的 `mixin:` 当成预处理指令。把 CFW 整段（含 `mixin:`）原样贴进扩展配置，结果往往是多出一个无意义的顶层键，真正的 dns、rules、tun 不会按你在 CFW 里的方式合并进去。",
+        "Verge 从 v1.7.x 把 Merge 配置改名为扩展配置，prepend/append 类能力挪到订阅右键菜单的可视化编辑器（例如 prepend-rules 在「编辑规则」的 prepend 里）。扩展配置只负责配置项覆写/合并。Script 配置同时改名为扩展脚本。CFW 的 Parsers 是脚本预处理，应对扩展脚本，而不是 Merge/扩展配置。原样粘贴既对不上键名，也走错了执行器。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "列表会整表替换，不能当成 Mixin 逐条追加",
+      "paragraphs": [
+        "扩展配置只改写出的字段，没写的保持不变。写出的字段按类型处理：列表和普通值（如 rules、dns.nameserver、tcp-concurrent）整体替换；tun、sniffer 这类嵌套对象逐项合并，只替换写出的子字段。dns 下写出的字段和顶层 hosts 会整体替换，nameserver-policy、fallback-filter 也不例外。全局扩展配置与订阅扩展配置之间同样如此。v2.5.5 起上述 dns 与 hosts 的整段替换规则已经写进文档。",
+        "因此，CFW Mixin 里「往 rules 前面加几条」「往 nameserver-policy 加一条」的思路，在扩展配置里会变成：你写出的那一小段列表把上一层结果整表换掉。全局写了 geosite:cn 的策略、订阅扩展又写了 +.example.com，最终 nameserver-policy 可能只剩后写的那一份。需要两条都在，就把条目写进同一层，或放到最后执行的订阅扩展脚本里逐条追加。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "从 Mixin 迁到 Verge 的步骤和判断",
+      "paragraphs": [
+        "1. 打开 CFW Mixin，去掉 `mixin:` 外壳，只保留真正要覆写的顶层键。\n2. 多数订阅都要改的项放全局扩展配置，个别订阅放订阅扩展配置。执行链路是：订阅原文 → 应用设置 → 全局扩展配置 → 全局扩展脚本 → 订阅扩展配置 → 订阅扩展脚本 → 应用设置回写。\n3. Parsers 里的 JavaScript 放到扩展脚本，用 `function main(config)` 改对象后 return，不要贴进 YAML。\n4. 下列字段由应用接管，扩展写入会在链路末尾被丢弃：external-controller、secret、mixed-port、socks-port、port、mode、allow-lan、log-level、ipv6、unified-delay，以及 tun.enable 和 TUN 对话框里保存过的 stack、device、auto-route 等。DNS 覆写开启时，覆写页填过的 dns 字段和 hosts 会在扩展之前替换订阅原文，但 dns.ipv6 仍可能被应用收回。\n5. 对照最终配置：是否出现孤立的 mixin 键；rules 是否被缩成 Mixin 里那几条；dns.nameserver-policy 是否只剩后写的一份。",
+        "判断标准：粘贴后出现 `mixin` 键、规则列表变短、DNS 策略被整表换掉，说明结构不兼容。按顶层字段重写，列表用可视化 prepend 或脚本追加，才能接近原来的预处理；不要期待「同一套 Mixin」在 Verge 里逐字生效。Verge 是基于 Tauri 的 Mihomo GUI，配置增强走的是扩展配置与扩展脚本，而不是 CFW 的 Mixin/Parsers 原文件。",
+        "https://www.clashverge.dev/guide/extend.html\nhttps://www.clashverge.dev/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

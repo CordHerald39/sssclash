@@ -1,0 +1,55 @@
+{
+  "title": "Clash Mi：电脑上的 geosite 配置拿到手机为什么会被改成规则集",
+  "description": "Clash Mi：电脑上的 geosite 配置拿到手机为什么会被改成规则集。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-c5ff83f0ed10",
+  "category": "版本对比",
+  "tags": [
+    "Clash Mi geosite 转 ruleset",
+    "版本对比",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "内置 mihomo 会把 geosite 收成规则集",
+      "paragraphs": [
+        "电脑上能用的 `GEOSITE,cn,DIRECT` 或依赖本地 GeoSite 数据文件的写法，拿到 Clash Mi 之后经常变成规则集引用。这不是订阅被机场改写，而是内置核心的转换策略。文档对「自带 mihomo 与原版的差别」写得很明确：geosite、geoip 会被强制转换成对应的 geo ruleset；iOS 下不支持使用 ips-asn 这类数据库；核心不能从面板里更新，必须跟随 App 更新；本地面板同样不能在面板里更新。",
+        "因此，桌面 YAML 不能当成「同一份内核配置」在手机上复用。你在电脑里看到的是 GEOSITE/GEOIP 语句加本地数据库，手机里看到的是转换后的 geo ruleset。面板内存数字也不能拿来和桌面客户端对拍：Clash Mi 的统计方式和 sing-box 类似，数值会比实际偏低。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "桌面规则类型到手机端会卡在哪些限制",
+      "paragraphs": [
+        "mihomo 的路由规则本身支持 DOMAIN、DOMAIN-SUFFIX、GEOSITE、GEOIP、IP-ASN、RULE-SET 等，规则从上到下匹配。桌面可以把 GEOSITE、GEOIP、IP-ASN 直接写在 rules 里。Clash Mi 的差异是：geosite/geoip 会强制转成 geo ruleset；iOS 明确不能用 ips-asn；面板里「更新核心 / 重启核心 / 重载配置 / 更新GEO」因平台或功能限制全部禁用，也不能在面板换内核。",
+        "规则集在 mihomo 里要通过 rule-providers 声明：type 可选 http、file、inline；behavior 为 domain、ipcidr、classical；format 为 yaml、text、mrs。mrs 目前 behavior 仅支持 domain 与 ipcidr。这是「正规的规则集写法」，和「内核把 GEOSITE 语句转成 geo ruleset」是两件事。看到配置里出现规则集名称，不要判断成 YAML 损坏。",
+        "IP-ASN 在通用 mihomo 规则里用于匹配 IP 的 ASN；Clash Mi 在 iOS 上不提供该数据库。把电脑配置原样导入后，相关规则不会按桌面那样工作。也无法靠面板换内核来消除这项差异。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "迁移时怎么改、用什么现象判断",
+      "paragraphs": [
+        "按场景处理，而不是反复复制同一份文件：",
+        "1. 在电脑配置里列出 rules 中的 GEOSITE、GEOIP、IP-ASN，以及所有 rule-providers。\n2. 准备给 Clash Mi 用时，把仍要保留的域名库、IP 库改成规则集声明；需要更紧凑的格式时再考虑 mrs，behavior 必须与内容一致。\n3. iOS 删除或改写 IP-ASN / ips-asn 相关项，不要指望换内核。\n4. geo ruleset 不支持手动更新，只支持自动更新，到「核心设置 - Geo Ruleset - 更新时间间隔」查看周期。面板里没有「更新GEO」入口属于产品限制。\n5. 连接后若 iOS 立即断开，应优先怀疑规则库体积，而不是转换失败。",
+        "判断依据可以写成三条。当前配置里 geosite 语句变成规则集引用，属于预期。iOS 侧无法使用 asn 数据库，应删规则或换匹配方式，而不是再导入桌面文件。面板找不到换内核、更新核心的入口，说明手机端不能复用桌面的内核生命周期。同一条机场订阅在桌面客户端与 Clash Mi 里表现不同，应分别维护字段，而不是追求两份 YAML 逐行相同。",
+        "https://clashmi.app/guide/faq\nhttps://wiki.metacubex.one/config/rule-providers/\nhttps://wiki.metacubex.one/en/config/rules/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

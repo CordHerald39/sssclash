@@ -1,0 +1,59 @@
+{
+  "title": "Clash Verge Rev 电脑端（Linux）：开 TUN 后本机 docker 映射端口为什么 curl 不通",
+  "description": "Clash Verge Rev 电脑端（Linux）：开 TUN 后本机 docker 映射端口为什么 curl 不通。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-22714aea3fde",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Linux TUN docker 端口打不开",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Verge Rev 在 Linux 开启 TUN 后，宿主机对 127.0.0.1 的 Docker 映射端口做 curl，常变成空响应或挂起，关掉 TUN 又恢复。这和规则里已写直连不矛盾：访问映射端口会先经 docker0 DNAT 再出站，auto-route 把回程抓进 TUN，连接在 docker-proxy 与容器之间闭合失败。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "用开关 TUN 和规则对照定性",
+      "paragraphs": [
+        "固定同一映射，避免把应用错误当成路由问题：",
+        "1. 关闭 TUN 时，对 127.0.0.1 加映射端口 curl 能返回正文，容器日志无异常。\n2. 仅打开 TUN 且 auto-route 为 true 后再 curl，变为空、超时或重置，即可认定是路径问题。\n3. 在 rules 里为容器网段增加 IP-CIDR 并指向 DIRECT 后若仍失败，说明报文没有走到用户态分流。",
+        "有公开记录采用相同步骤：映射 8080 时未开 TUN 正常，开启后为空，关闭后再恢复。空响应应先看成 TCP 未建完，而不是 HTTP 业务失败。判断依据是「只动 TUN、不动容器」时端口通断翻转。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "为什么 DIRECT 规则救不了回程",
+      "paragraphs": [
+        "访问 127.0.0.1 的发布端口时，内核把目的地址 DNAT 到容器。Docker 默认网桥多落在 172.16.0.0/12，报文从 docker0 出去，回程源地址是容器 IP。auto-route 会把全局流量送进 TUN。回程一旦被当成要交给代理栈的新会话，映射端口在宿主机侧就再也对不上。",
+        "IP-CIDR DIRECT 只在流量进入 Clash 分流后生效。回程若在策略路由阶段被抓进 TUN，规则写了也执行不到。route-exclude-address 作用在 auto-route 生成的路由上，把指定网段从进 TUN 的范围拿掉，才和故障点一致。同时开启 strict-route 时，Linux 会让不支持的网络不可达并把连接送进 TUN，网桥回程更易误伤。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "排除 172.16.0.0/12 而不是加一条 DIRECT",
+      "paragraphs": [
+        "1. 用 ip addr、docker network inspect 确认网段。默认 bridge 用 172.16.0.0/12 覆盖更稳妥；自定义网络若在 192.168.0.0/16，文档示例已包含该段。\n2. 保留 auto-route，在 tun 写入 route-exclude-address，排除 172.16.0.0/12，IPv6 可排除 fc00::/7。\n3. 不要只改 rules。排除生效后，再 curl 映射端口，并对容器 IP 直接访问做对照。\n4. 按规则集排除时用 route-exclude-address-set，仅 Linux 且需 nftables，还要 auto-route 与 auto-redirect 同时启用，并与 routing-mark 冲突。旧字段 inet4-route-exclude-address 即将废弃。\n5. 仅部分网卡受影响时，用 exclude-interface 排除 docker0，注意不可与 include-interface 并存。",
+        "验收：TUN 开启时映射端口的 curl 结果与关闭时一致；容器出网仍按原分流；TUN 路由不再把 172.16.0.0/12 当作默认进 TUN 的目标。排除过宽导致公网分流异常时，应缩小网段，而不是退回只写 IP-CIDR DIRECT。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://github.com/clash-verge-rev/clash-verge-rev/issues/208"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

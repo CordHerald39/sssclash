@@ -1,0 +1,62 @@
+{
+  "title": "Clash Verge Rev 电脑端：本地 YAML 里的 proxy-providers 为什么不按 interval 刷新",
+  "description": "Clash Verge Rev 电脑端：本地 YAML 里的 proxy-providers 为什么不按 interval 刷新。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-31519b3caae3",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge proxy-providers 不自动更新",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "把多个机场写进一份 Local YAML 的 `proxy-providers` 后，首页订阅卡片怎么更新，节点列表也不变，常被理解成 `interval` 没生效。多订阅合并示例把 `proxy-providers` 写在 Local 配置上半部，`type: http`、`path`、`url`、`interval` 成组出现；Mihomo 文档则写明 `interval` 是更新该 provider 的时间，单位为秒。首页卡片刷新只更新这份 Local 配置本身，不会代替内核去拉 `path` 指向的缓存。节点列表不变时，应看内核有没有在拉 `./proxy_provider/`（合并示例路径）或 `./proxy_providers/`（手册路径），而不是只点订阅更新。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "首页卡片只更新这份 Local 配置本身",
+      "paragraphs": [
+        "Local 作为订阅卡片出现时，卡片间隔管的是重新读取或下载这张 YAML。写在 YAML 内部的集合是另一层：",
+        "```yaml\nproxy-providers:\n  1.provider1:\n    type: http\n    path: ./proxy_provider/p1.yaml\n    interval: 21600\n```",
+        "`interval: 21600` 表示内核每隔 21600 秒更新该集合。`url` 填你自己的订阅地址；示例不要写完整网址，参数只保留 `token=示例` 这类片段。`path` 不可重复；不填时用 url 的 MD5 当文件名，且路径限制在 HomeDir（启动参数 `-d`）内，其他位置要靠环境变量 `SAFE_PATHS`（语法同系统 PATH）。",
+        "判断依据：只点首页更新后，Local 文件修改时间变了、但 `path` 下缓存文件时间不变，说明卡片层动了、provider 层没动。缓存文件时间按秒级 `interval` 变化，才是内核在刷新。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "看内核是否在拉 path 缓存，不要只点订阅更新",
+      "paragraphs": [
+        "1. 确认该 provider 的 `type` 为 `http`，且 `url` 可访问。`file` / `inline` 不会按 HTTP `interval` 去拉远程。\n2. 查看运行目录下 `./proxy_provider/` 或 `./proxy_providers/` 里对应 yaml 的时间戳，是否在 `interval` 到期后变化。\n3. 需要立刻刷新时，应让内核更新该 provider，而不是只点 Local 卡片。卡片成功只保证 Local 文本还在磁盘上。\n4. `proxy` 字段表示经过指定代理下载或更新。节点全不可用又把 `proxy` 指到那些节点，下载会失败，列表会一直停在旧缓存。`size-limit` 默认为 0 即不限制大小。也可用 `header` 自定义请求头。",
+        "策略组即使写了 `include-all: true`，纳入的也是当前 `path` 缓存里的节点。缓存不按 `interval` 更新时，组里名单不会变。下载失败时内核会继续用旧文件；`payload` 仅在 `inline` 类型作为内容，或在 http/file 解析失败时当备用，不会按 interval 去覆盖 http 缓存。",
+        "判断依据：日志或文件时间显示内核在读 `path`，但内容旧，查 `url`、`proxy`、请求头；完全没有读 `path`，才是 interval 任务没跑或 type 不是 http。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "健康检查 interval 只测延迟，不负责重新下载",
+      "paragraphs": [
+        "`health-check.enable` 打开后，`health-check.interval` 单位也是秒，但用途是延迟测试，不是重新 GET 订阅。`health-check.url` 推荐 `https://www.gstatic.com/generate_204` 或 `https://cp.cloudflare.com`；`timeout` 为毫秒；`lazy` 默认为 true，不使用该集合节点时不进行测试；`expected-status` 可指定期望状态。",
+        "因此：延迟数字在变、节点名和数量不变，是健康检查在工作、下载没发生。节点名要变，靠的是 http provider 的 `interval` 重新写入 `path`。`override` 的前缀、后缀、`proxy-name` 替换只作用于已下载内容，不会触发下载。`filter`、`exclude-filter`、`exclude-type` 同样只过滤已有节点。",
+        "步骤：先看 `path` 文件是否按秒级 interval 更新；再看健康检查是否仅在 `lazy` 允许时测延迟；最后才改 `override`。不要把卡片更新、健康检查间隔、provider 下载间隔当成同一层开关。",
+        "资料：\nhttps://wiki.metacubex.one/config/proxy-providers/\nhttps://www.clashverge.dev/guide/config.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

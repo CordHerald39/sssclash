@@ -1,0 +1,56 @@
+{
+  "title": "Clash Verge Rev 电脑端：覆写后命中的 RULE-SET 为什么跟 rule-providers 声明顺序走",
+  "description": "Clash Verge Rev 电脑端：覆写后命中的 RULE-SET 为什么跟 rule-providers 声明顺序走。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-218e6a9b83a7",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge 规则集顺序 覆写",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "运行时顺序才是命中依据",
+      "paragraphs": [
+        "覆写订阅之后，同一个域名有时会命中你并不想优先使用的 `RULE-SET`。扩展配置里明明把直连集合写在代理集合前面，浏览器却走进了代理组。路由规则按从上到下匹配，列表顶部的优先级高于其底下的规则。`RULE-SET` 只是引用已配置的规则集合，并不会因为某个提供者在 `rule-providers` 里「看起来更重要」就自动提前。真正决定谁先吃到请求的，是内核已经加载的那份 `rules` 数组里，这些 `RULE-SET` 行谁在上面。",
+        "具体场景里不要只打开覆写原文。把三份内容摊开对照：订阅原文中的 `rules`、扩展配置写出的 `rules`、运行时配置中的 `rules`。若运行时里集合 A 跑到集合 B 前面，而 `rule-providers` 映射里 A 也写在前面，就可以判断是合并层按提供者写入顺序重排，而不是单条 `DOMAIN`、`DOMAIN-SUFFIX` 写错。两个集合都包含同一校园域名或同一 CDN 后缀时，先出现的那条 `RULE-SET` 会直接命中，后面的集合不再参与。",
+        "若运行时顺序与覆写原文一致，再检查集合内部是否过早出现 `MATCH`，或逻辑规则 `AND`、`OR`、`NOT` 的括号是否把无关流量接住。`GEOSITE`、`IP-CIDR`、进程类规则与 `RULE-SET` 处在同一条链上，规则类型本身不会改变「先匹配先生效」。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "合并层如何把 RULE-SET 重排",
+      "paragraphs": [
+        "Clash Verge Rev 的扩展不是把几行 YAML 简单拼到订阅末尾。执行链路依次为：订阅原文、应用设置、全局扩展配置、全局扩展脚本、订阅扩展配置、订阅扩展脚本，最后应用把接管字段写回。扩展配置只改写出的字段；`rules` 这类列表会整体替换，后一层写出的数组覆盖前一层。`rule-providers` 作为映射按键写入，后写的同名提供者覆盖先写的。全局扩展与订阅扩展会同时生效，订阅侧更靠后。",
+        "因此，你在某一层排好的 `RULE-SET` 先后，可能被另一层整表替换，或在重新生成列表时跟随提供者映射的遍历顺序。应用设置优先级高于扩展，但接管的是端口、模式、日志、TUN 开关等字段，不会在链路末尾帮你恢复 `rules` 顺序。只看覆写原文，会误判「A 已经在 B 前面」。",
+        "集合展开后的条目再多，也不会插到比该条 `RULE-SET` 更靠前的规则上面。目标 IP 类规则若需要跳过解析，应加上 `no-resolve`，以免更早触发的 DNS 改变后续匹配。逻辑规则要注意括号，`SUB-RULE` 只会进入对应子规则，同样遵守自上而下。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用扩展脚本按数组钉死规则",
+      "paragraphs": [
+        "需要固定优先级时，把最终 `rules` 交给最后执行的订阅扩展脚本按数组重写，而不是继续叠多层 YAML。脚本入参是上一阶段的完整对象。在 `main` 里构造有序列表：先放必须直连的 `RULE-SET`，再放代理集合，最后以 `MATCH` 收尾，然后赋给 `config.rules` 并返回。命中顺序只跟数组下标有关，与 `rule-providers` 键谁先声明无关。示例如下，集合名换成你实际的提供者键：",
+        "```javascript\nfunction main(config) {\n  config.rules = [\n    \"RULE-SET,direct-set,DIRECT\",\n    \"RULE-SET,proxy-set,PROXY\",\n    \"MATCH,auto\"\n  ];\n  return config;\n}\n```",
+        "同时缩小重叠。能用更窄的 `DOMAIN`、`DOMAIN-SUFFIX` 表达的域名，不要同时出现在两个 classical 集合里。改完后必须再次打开运行时配置，确认 `RULE-SET` 行顺序与脚本数组一致。若全局扩展配置仍整表替换 `rules`，把列表改动只留在订阅扩展脚本，或删掉那层对 `rules` 的写出。不要指望再覆写一次就会保留手写先后。",
+        "https://wiki.metacubex.one/config/rules/\nhttps://www.clashverge.dev/guide/extend.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

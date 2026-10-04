@@ -1,0 +1,61 @@
+{
+  "title": "Clash Meta 手机端（Android）：连上家里 Wi-Fi 想自动关代理，后台为什么关不掉",
+  "description": "Clash Meta 手机端（Android）：连上家里 Wi-Fi 想自动关代理，后台为什么关不掉。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-0a741ed9f04a",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta 连上家里WiFi 自动关闭",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "连上家里 Wi-Fi 后希望自动关掉 Clash Meta 代理，属于典型的场景自动化。官方给出的开关方式，并不是对 VpnService 直接调用停止，而是把 Intent 发送到指定 Activity。很多脚本在后台直接投递 STOP，系统把它当成后台服务或后台 Activity 启动来限制，于是状态栏钥匙图标还在、隧道也没有拆除。要把家里 Wi-Fi 场景做稳，需要同时核对组件名、动作常量和前台条件。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "官方 START 与 STOP 的接收方",
+      "paragraphs": [
+        "Clash Meta for Android 文档写明应用包名为 `com.github.metacubex.clash.meta`。切换服务状态时，Intent 必须发给 Activity：`com.github.kr328.clash.ExternalControlActivity`。动作字符串如下：",
+        "- 启动服务使用 `com.github.metacubex.clash.meta.action.START_CLASH`\n- 停止服务使用 `com.github.metacubex.clash.meta.action.STOP_CLASH`\n- 切换状态使用 `com.github.metacubex.clash.meta.action.TOGGLE_CLASH`",
+        "家里路由器连上之后，自动化只应发送 STOP_CLASH。判断依据有三条。第一，自动化工具里的组件必须是上述 Activity，而不是自行推断的服务类名或广播接收器。第二，action 必须带完整包名前缀，短名无法命中该 Activity 上的 intent-filter。第三，发完后如果完全没有该 Activity 的启动记录，说明 Intent 在到达应用之前就被丢掉，应先修正组件与动作，而不是加延时重试。文档把这组动作归在外部控制，含义就是：启停入口在已导出的 Activity，不在普通应用可随意绑定的服务接口上。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "后台发出 STOP 为何关不掉",
+      "paragraphs": [
+        "Android 的 VPN 方案要求应用提供继承 VpnService 的服务，由系统负责启动、停止并跟踪连接状态。从 Android 8.0 开始，后台应用启动服务受到限制，需要转入前台并调用 startForeground。连接处于活动状态时，系统会显示通知，状态栏出现 VPN 钥匙图标，快捷设置托盘也能打开信息面板。STOP_CLASH 的入口是 Activity。当应用位于后台、任务列表被划掉，或处于省电与后台启动限制时，系统可能推迟甚至拒绝拉起该 Activity，停止逻辑走不完。",
+        "开发文档强调：应当停止服务，而不是只关闭连接。用户在系统 VPN 界面断开、忘记该应用，或关闭始终开启 VPN 时，系统才会调用 onRevoke；此时已经有其他网络接口在转发流量，应用再关闭受保护的隧道套接字和本地接口文件描述符。始终开启由系统在开机后拉起服务，后台 STOP 即使短暂成功，也可能被再次拉起。针对家里 Wi-Fi 的步骤如下：触发条件使用已连接到指定无线网并且已获得地址，不要用信号强度抖动；先把应用带到前台，保证 ExternalControlActivity 具备可见启动条件，再发送 STOP_CLASH；避开息屏、打盹与待机限制窗口；到系统 VPN 列表确认没有始终开启。判断依据是钥匙图标消失、通知移除。图标仍在，说明系统仍把 VpnService 视为活动连接。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用系统生命周期核对结果",
+      "paragraphs": [
+        "每个用户或工作资料同一时间只能有一个活动 VPN 服务，启动新的服务会自动停止旧服务。成为当前 VPN 之前必须调用 VpnService.prepare()；若用户尚未授权，方法会返回系统确认界面。自动化在无前台界面时无法完成该确认，START 会失败；STOP 时如果服务已经不在系统选定状态，也会表现为关了又像没关。建议按下面顺序核对：系统设置中的 VPN 项是否仍显示已连接；快捷设置是否还能打开该连接的信息面板；是否另有 VPN 应用抢占了唯一活动服务。",
+        "家里无线网和移动数据来回切换时，还要防止 START 与 STOP 抢跑。常见误判是把自动化任务显示已执行当成隧道已拆除。任务执行成功只说明 Intent 被系统接受，不说明服务已经销毁。必须以钥匙图标、通知和系统 VPN 列表三项同时变化作为关掉成功的依据。若三项里只有自动化日志成功，按后台限制处理：先进入前台再发 STOP。若三项都变了但稍后又连上，按始终开启或开机拉起处理，而不是继续堆叠停止指令。完整顺序是：确认已进入指定无线网，应用处于可启动 Activity 的状态，向 ExternalControlActivity 发送 STOP_CLASH，再核对上述三项。",
+        "参考资料：",
+        "https://github.com/MetaCubeX/ClashMetaForAndroid/blob/main/README.md",
+        "https://developer.android.com/develop/connectivity/vpn"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

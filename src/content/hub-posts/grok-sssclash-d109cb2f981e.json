@@ -1,0 +1,60 @@
+{
+  "title": "Clash Verge Rev 电脑端：校验报 proxy no-resolve not found 是哪条规则写错了",
+  "description": "Clash Verge Rev 电脑端：校验报 proxy no-resolve not found 是哪条规则写错了。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-d109cb2f981e",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge no-resolve not found",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Verge Rev 电脑端在更新或启用配置时，会用内核校验规则。若出现 proxy no-resolve not found，问题几乎总是某一条 IP 类规则把附加参数写到了策略名的位置。Mihomo 把 IP-CIDR 的第三段当作策略名；写成网段后面直接跟 no-resolve 时，内核会去寻找名为 no-resolve 的代理，校验失败并回滚。正确写法是网段、策略名、再写 no-resolve。应当补上策略名，而不是关掉校验硬加载。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "规则字段顺序和 no-resolve 的位置",
+      "paragraphs": [
+        "路由规则按从上到下匹配，列表顶部优先。单条规则的基本形态是：类型、匹配载荷、策略名；部分类型还可以追加附加参数。IP-CIDR 与 IP-CIDR6 用来匹配目标 IP 范围，二者效果相同，后者只是别名。文档中的写法是：IP-CIDR 匹配 127.0.0.0/8，策略为 DIRECT，最后才是 no-resolve。",
+        "```yaml\nrules:\n  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve\n```",
+        "no-resolve 属于附加参数，只支持关于目标 IP 的规则。域名开始匹配这类规则时，内核可能先做 DNS 解析，再检查目标 IP 是否命中；加上 no-resolve 表示跳过这次解析。若更早的规则已经触发过解析，带 no-resolve 的目标 IP 规则仍可能命中。它不是策略名，也不能代替 DIRECT、REJECT 或某个代理组。DOMAIN、DOMAIN-SUFFIX、GEOSITE 等域名规则不使用 no-resolve，把该参数加到域名规则上既无依据，也会让逗号字段错位。",
+        "错误形态是第三段直接写 no-resolve，例如 IP-CIDR 后面只跟网段和 no-resolve，把策略名整段漏掉。此时内核把 no-resolve 当成出站名称去解析代理集合，找不到就报 proxy no-resolve not found。GEOIP、IP-ASN、IP-SUFFIX 同样需要策略名；MATCH 没有条件，但仍要有策略名。src 会把目标 IP 匹配转为来源 IP 匹配，它和 no-resolve 一样排在策略名后面，不要插到第三段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "怎样从配置里定位写错的那一条",
+      "paragraphs": [
+        "先在规则列表里搜索 no-resolve。凡是逗号分隔后只有三段、且最后一段是 no-resolve 的 IP-CIDR、IP-CIDR6、GEOIP、IP-ASN、IP-SUFFIX，都是嫌疑对象。正确的四段应为：类型、网段或地理条件、已经存在的策略名、no-resolve。策略名必须是配置里真实存在的代理、代理组，或 DIRECT、REJECT 这类内置出站。",
+        "第二步，核对策略名是否拼写错误、是否引用了尚未定义的组。第三步，确认逻辑规则 AND、OR、NOT 的括号完整，不要把附加参数塞进逻辑载荷中间。第四步，改完后重新校验，看到 clash-verge-check.yaml 通过再启用。判断依据是：报错字符串消失，配置不再回滚到旧文件，节点列表能停留在新规则对应的版本。不要用关闭校验来强行加载。缺策略名的规则在运行时同样无法选择出站，只是把失败从导入阶段推迟到流量阶段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用扩展脚本补策略名而不是关校验",
+      "paragraphs": [
+        "若订阅原文批量漏写策略，可在扩展脚本里遍历 rules：识别类型为目标 IP 类、分段数量不足、最后一段等于 no-resolve 的条目，在 no-resolve 前插入明确策略名，例如 DIRECT 或已有分组名，再写回配置。脚本应只改规则字符串，不要删除 no-resolve，以免改变「跳过解析」的原意。手工修补时，以文档写法为准：类型、载荷、策略、no-resolve。",
+        "改完保存，等校验结束。若仍报某个名字 not found，说明第三段仍然不是合法出站，继续按报错字符串去规则列表精确搜索。逻辑规则、RULE-SET、SUB-RULE 出问题时常表现为括号或集合名，与 no-resolve 不是同一类；不要混在一起改。关闭校验并不能让错误字段变成合法策略名。",
+        "https://wiki.metacubex.one/config/rules/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

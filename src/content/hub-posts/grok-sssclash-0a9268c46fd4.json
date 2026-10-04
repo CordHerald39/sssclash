@@ -1,0 +1,65 @@
+{
+  "title": "Clash 电脑端（Linux）：规则写了 172.16 直连，容器互访为什么还是断",
+  "description": "Clash 电脑端（Linux）：规则写了 172.16 直连，容器互访为什么还是断。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-0a9268c46fd4",
+  "category": "配置教程",
+  "tags": [
+    "Clash Linux route-exclude-address docker 网段",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Linux 上开了 TUN 的 `auto-route` 之后，Docker 网桥（常见是 `172.16.0.0/12` 里的 `172.17.0.0/16`、`172.18.0.0/16` 等）也会被内核送进 Clash。只在 `rules` 里写 `IP-CIDR,172.16.0.0/12,DIRECT`，容器互访、容器访问宿主机网桥地址仍可能中断。两条机制作用的阶段不同。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "规则直连发生在流量已经进 Clash 之后",
+      "paragraphs": [
+        "`IP-CIDR` 属于路由规则：报文先被网卡/路由送到 TUN，再由 Mihomo 匹配 `rules`，匹配到 `DIRECT` 后再从出口打出去。对 Docker 来说，问题往往出在“不该进 TUN 的东西已经进了”。",
+        "典型路径是：容器 A 访问容器 B 的网桥 IP → 宿主机路由已被 `auto-route` 改成“默认进 TUN”→ 报文进 Clash → 即使命中 DIRECT，回程、conntrack、网桥转发也不再是 Docker 原来的二层/三层路径。结果是：宿主机访问公网正常，`docker exec` 里访问另一容器或网关失败，或宿主机访问 `172.17.0.2` 超时。",
+        "判断依据：",
+        "- `ip route` 里能看到默认路由或大段路由指向 TUN 网卡（`device` 指定的名字，文档示例如 `utun0`，Linux 上常见为配置里的名称）。\n- Clash 日志里出现目的地址为 `172.17.0.0/16`、`172.18.0.0/16` 的连接，说明网桥流量已经入站。\n- 关掉 `tun.enable` 或 `auto-route` 后容器互访立刻恢复，重新打开又断：更应查内核路由，而不是再加一条相同的 `IP-CIDR`。",
+        "`strict-route` 在 Linux 上会把不支持的网络变得不可达，并把连接都送进 TUN，用来减少泄漏。对 Docker 网段来说，这会让“漏进 TUN”更彻底，不能当作修复容器互访的手段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用 route-exclude-address 在 auto-route 阶段挪走网段",
+      "paragraphs": [
+        "TUN 文档中的 `route-exclude-address` 在启用 `auto-route` 时排除自定义网段，让这些前缀不要被写进 Clash 接管的路由表。它发生在内核路由阶段，报文可以继续走 Docker 网桥、`docker0`、`br-` 网卡，而不是先绕进 TUN 再 DIRECT 出来。",
+        "示例结构（网段按本机 `ip addr`、`docker network inspect` 的实际子网填写）：",
+        "```yaml\ntun:\n  enable: true\n  auto-route: true\n  route-exclude-address:\n    - 172.16.0.0/12\n    - 192.168.0.0/16\n    - 10.0.0.0/8\n    - fc00::/7\n```",
+        "文档还保留即将废弃的 `inet4-route-exclude-address` / `inet6-route-exclude-address`，含义同样是排除，不是规则里的 DIRECT。若已用 nftables 且同时开了 `auto-route` 与 `auto-redirect`，也可以用 `route-exclude-address-set` 指向规则集里的目标 CIDR，让匹配的流量绕过路由；它和配置里的 `routing-mark` 冲突，不要两套一起上。",
+        "`route-address` 则是反过来：不走默认的“几乎全网进 TUN”，只把列出的前缀送进 TUN。只想代理公网、本机容器网全部留在内核时，排除列表通常比再堆 IP 规则更直接。",
+        "改完后需要重新加载 TUN，再查 `ip rule` / `ip route show table 2022`（`iproute2-table-index` 默认 2022）。排除成功的依据是：目标 `172.17.0.0/16` 不再指向 TUN，容器 IP 之间的 TCP 能完成三次握手。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "场景步骤：容器互访断了先做这几步",
+      "paragraphs": [
+        "1. 列出网桥：`ip addr show docker0`，以及 `docker network ls` 对应的 `br-` 接口，记下所有 `172.x`/`10.x`/`192.168.x` 前缀。\n2. 看这些前缀是否被 `auto-route` 吞掉：目的地址为容器 IP 的路由若出接口是 TUN，则 `IP-CIDR DIRECT` 解决不了。\n3. 把上述前缀写入 `route-exclude-address`，不要只改 `rules` 顶部。局域网物理网段（文档示例是 `192.168.0.0/16`）若也要打印机、NAS 直连，一并排除。\n4. 仍异常时再查 `include-interface` / `exclude-interface`：两者不能同时配。误把 `docker0` 包含进 TUN、或把物理网卡排除错，都会表现为“规则已经 DIRECT 但二层不通”。\n5. 需要 TCP 重定向时，Linux 上的 `auto-redirect` 依赖 `auto-route` 已启用；排除网段后，这些网段不应再被 iptables/nftables 抓进 Clash。",
+        "`dns-hijack` 只把 DNS 送进内部 DNS 模块，不会把 172.16 网段从路由里拿出来。进程规则、DOMAIN 规则同样晚于内核送 TUN。容器互访要先保证报文不要进 Clash，再谈规则里如何 DIRECT。",
+        "https://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

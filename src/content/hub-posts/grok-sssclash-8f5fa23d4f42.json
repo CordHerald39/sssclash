@@ -1,0 +1,59 @@
+{
+  "title": "Clash 电脑端（Linux）：终端能 git clone，docker pull 为什么还超时",
+  "description": "Clash 电脑端（Linux）：终端能 git clone，docker pull 为什么还超时。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-8f5fa23d4f42",
+  "category": "故障排查",
+  "tags": [
+    "Clash Linux docker pull 超时 HTTP_PROXY",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "终端里已设置 HTTP_PROXY 与 HTTPS_PROXY，git clone 正常，docker pull 却超时。常见原因有两层：dockerd 由 systemd 启动，不继承当前 shell 的环境变量；即便变量写对了，来自 docker0 的连接仍可能被代理端口的局域网开关、绑定地址或鉴权拒绝。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "证明 daemon 没有继承 shell 代理",
+      "paragraphs": [
+        "不要用同一终端 curl 成功来反推 Docker 已走代理。",
+        "1. shell 中 git clone 成功，只说明当前用户进程能用 mixed-port。\n2. 执行 systemctl show docker --property=Environment，若没有 HTTP_PROXY、HTTPS_PROXY，即可认定服务未继承。\n3. 观察 pull 卡在直连仓库还是连接代理。宿主机直连失败而 shell 走代理成功，说明 daemon 仍在直连。",
+        "入站能否从其他地址进入，取决于监听地址、系统路由和防火墙，与协议分类无关。dockerd 走的是顶层 mixed-port 这类应用代理入站，必须单独满足监听与放行。find-process-mode 只决定 Clash 是否匹配进程名，不会把 shell 变量注入 systemd，pull 超时时不要先改它。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "为 docker.service.d 单独写代理",
+      "paragraphs": [
+        "1. 创建 /etc/systemd/system/docker.service.d。\n2. 在 drop-in 的 Environment 中写入 HTTP_PROXY、HTTPS_PROXY，指向本机 mixed-port 的地址和端口；NO_PROXY 放入回环、Docker 网桥网段和内网仓库，避免访问容器网段或本机套接字时再进代理。\n3. 执行 systemctl daemon-reload 并重启 docker，再次 show 确认变量已在单元中。\n4. 不要写在用户 profile 里指望 dockerd 读取；也不要只给 docker CLI 设置，真正 pull 的是 daemon。",
+        "若 mixed 端口开了 authentication，skip-auth-prefixes 默认包含 127.0.0.1/8 与 ::1/128。daemon 连回环可跳过鉴权；源地址若是 docker0 或容器网段，要把该网段加入 skip-auth-prefixes，或让 daemon 携带用户名与密码。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "允许来自 docker0 的 mixed-port 连接",
+      "paragraphs": [
+        "1. allow-lan 设为 true，否则非回环源地址会被拒绝。bind-address 需覆盖 docker0 能到达的地址，文档可用 * 绑定全部，或写成网桥 IPv4。\n2. lan-allowed-ips 默认为 0.0.0.0/0 与 ::/0；若曾收紧，把 docker0 网段加回。lan-disallowed-ips 黑名单优先，不要列入网桥地址。\n3. 顶层 mixed-port 适合只开一组固定端口。监听仅在 127.0.0.1 时，只有 daemon 也连回环才通；构建过程若从网桥地址过来，必须改 bind-address。\n4. 用 ss 查看监听范围，并用防火墙放行 docker0 网段到该端口的 TCP。监听、路由、防火墙三者缺一，都会表现为 pull 超时。",
+        "验收：单元环境里能看到代理变量；docker pull 不再在直连仓库处超时；docker0 源地址访问 mixed-port 不被 allow-lan 或鉴权拒绝。shell 能 git clone 不能再当作 daemon 已走代理。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/general/\nhttps://wiki.metacubex.one/config/inbound/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

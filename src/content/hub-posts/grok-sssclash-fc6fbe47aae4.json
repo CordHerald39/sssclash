@@ -1,0 +1,55 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：公司电脑已有 PAC，再开系统代理会不会把脚本顶掉",
+  "description": "Clash Verge Rev 电脑端（Windows）：公司电脑已有 PAC，再开系统代理会不会把脚本顶掉。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-fc6fbe47aae4",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge 公司 PAC 被覆盖",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "公司电脑往往已经通过 PAC 或 WPAD 指定内网代理：浏览器与部分办公组件按脚本决定“直连还是走网关”。Clash Verge Rev 的系统代理改的是 WinINET 用户级设置，写入静态代理服务器和端口后，自动配置脚本通常被覆盖。内网 OA、邮件、统一认证会突然全部改走本地监听，表现为登录环路、证书告警或根本连不上。WinHTTP 路径又不自动沿用同一份 PAC。这种场景应改用手动 `mixed-port`，或先关掉系统代理，而不是打开 TUN 去“一网打尽”。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "系统代理覆盖的是哪一层",
+      "paragraphs": [
+        "系统代理属于行业约定：程序自发读取注册表或系统变量里的代理端口，把 HTTP/HTTPS 发到本地内核。它不是强制拦截，也不能携带 UDP。公司环境里，WinINET 用户级配置一旦变成“固定主机加端口”，原先的 PAC 地址和 WPAD 自动发现会被挤掉。判断依据：未开 Verge 时浏览器代理显示自动配置脚本；开启系统代理后变成 127.0.0.1 加端口；内网主机名开始走代理规则，而按公司脚本本应 DIRECT。办公套件若只认 WinINET，会立刻跟着乱；这与规则模式、全局模式无关，是入站约定被改写。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "WinHTTP 与 PAC 不是同一套配置",
+      "paragraphs": [
+        "WinHTTP 实现 WPAD 自动代理，流程是：用 DHCP 或 DNS 发现 PAC 的 URL，下载脚本，对每次请求执行 `FindProxyForURL`。它只接受 `http:` / `https:` 的 PAC，不接受 `file:`。服务端组件常用独立工具把代理写进 WinHTTP 自己的注册表，和浏览器看到的 WinINET 不是同一份。桌面程序若走 WinHTTP，不会因为你在 Verge 里打开系统代理就自动吃到公司 PAC；反过来，静态系统代理也填不进 WinHTTP 的自动发现逻辑。判断依据：同一台机器上，浏览器已指向本地端口，但某项 Windows 服务、更新组件或自研客户端仍按旧 WPAD 或直连；或完全忽略 PAC，表现为内网名字解析对、应用层却超时。把“系统代理已开”当成整机生效，会误判。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "不要用 TUN 补 PAC，改用 mixed-port",
+      "paragraphs": [
+        "TUN 会建虚拟网卡并把路由重定向到内核，拦截 TCP/UDP，不依赖程序是否遵守约定。公司电脑上这会把本该走 PAC 的内网段、WPAD 发现流量、甚至部分连通性检测一并卷进来，故障面比静态系统代理更大。需要代理的应用，应在应用自己的代理设置里填写内核的 mixed 入站（主机为本地回环、端口为配置里的 mixed-port）；其余办公软件保持公司 PAC。步骤：先关闭 Verge 系统代理，确认 PAC/WPAD 恢复、内网应用可用；只给浏览器或终端手动指定 mixed-port；不要为了少改几处设置去开 TUN；若必须保留内核，让规则对内网域名与 RFC1918 地址 DIRECT。判断依据：WinINET 里重新出现自动脚本；内网系统恢复；需要翻墙的程序仅在手动指定端口时走内核。服务模式、管理员权限改变的是能否拉起 TUN，解决不了 PAC 被覆盖的问题。",
+        "参考资料：\nhttps://www.clashverge.dev/guide/term.html\nhttps://learn.microsoft.com/en-us/windows/win32/winhttp/winhttp-autoproxy-support"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

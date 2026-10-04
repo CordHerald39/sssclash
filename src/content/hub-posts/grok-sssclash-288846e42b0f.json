@@ -1,0 +1,66 @@
+{
+  "title": "Clash 电脑端：Premium 的 SCRIPT 规则在 Mihomo 里用什么代替",
+  "description": "Clash 电脑端：Premium 的 SCRIPT 规则在 Mihomo 里用什么代替。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-288846e42b0f",
+  "category": "配置教程",
+  "tags": [
+    "Clash SCRIPT 规则 替代",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "从 Clash Premium 迁到 Mihomo 时，把 `SCRIPT,script-path` 原样贴进路由表不会生效。当前内核列出的规则类型里没有 SCRIPT。原先用脚本判断“进程加协议”“域名加 UDP”“先看入口再分子表”的逻辑，要拆成 `AND`、`OR`、`NOT` 或 `SUB-RULE`，并注意双层括号。不要把旧 Premium 的脚本路径当成还能用的规则类型。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "静态条件改写成 AND、OR、NOT",
+      "paragraphs": [
+        "规则仍是从上到下匹配，写在上面的优先。能直接写进列表的类型包括域名、IP、端口、进程、入站、协议等。电脑端脚本里最常见的判断，多半能落到这些原子规则上。",
+        "进程加协议：",
+        "```\n- AND,((PROCESS-NAME,chrome.exe),(NETWORK,udp)),PROXY\n```",
+        "域名加 UDP：",
+        "```\n- AND,((DOMAIN,baidu.com),(NETWORK,UDP)),DIRECT\n- OR,((NETWORK,UDP),(DOMAIN,baidu.com)),REJECT\n- NOT,((DOMAIN,baidu.com)),PROXY\n```",
+        "逻辑规则的格式是 `LOGIC_TYPE,((payload1),(payload2)),Proxy`。payload 本身也是规则类型加匹配值，例如 `DOMAIN,google.com`。文档强调逻辑规则要小心使用括号，少一层或多一层都会导致整行无法按预期工作。",
+        "进程还可以用 `PROCESS-PATH` 写完整路径，`PROCESS-NAME` 只比进程名。协议用 `NETWORK`，取值 tcp 或 udp。入站用 `IN-TYPE`、`IN-NAME`、`IN-PORT`。这些都可以作为 AND/OR/NOT 的 payload。Windows 路径、通配和正则是独立类型，不要塞进 SCRIPT 字段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "先筛入口再走子表时用 SUB-RULE",
+      "paragraphs": [
+        "脚本里若先判断 TCP 再套一套域名表，或先判断某入站再套另一套策略，对应的是子规则，而不是外部脚本文件。",
+        "```\n- SUB-RULE,(NETWORK,tcp),sub-rule\n```",
+        "`SUB-RULE` 同样要小心括号。匹配到条件后进入名为 sub-rule 的子表，子表里再写 `DOMAIN`、`PROCESS-NAME`、`MATCH` 等。这样可以把旧脚本的分支展开成“入口条件 + 子表”。",
+        "`RULE-SET` 用来引用规则集合，需要先配置 rule-providers。它替代的是大段域名或 IP 列表，不是脚本。不要把 SCRIPT 的路径填进 `RULE-SET`。`MATCH` 必须放在最后，逻辑规则和 `SUB-RULE` 都要写在它前面。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "迁移时按旧行逐条对照日志",
+      "paragraphs": [
+        "打开旧配置，搜索 `SCRIPT`。每一条都记下它实际在判断什么：进程名、域名、是否 UDP、入站名称。然后在新规则里用对应原子类型重写，禁止保留 `SCRIPT,script-path` 这种行。",
+        "判断依据有三条。其一，内核能否加载配置，不再因为未知规则类型失败。其二，连接日志里的规则名是否变成 `AND`、`OR`、`NOT`、`SUB-RULE` 或具体的 `PROCESS-NAME` / `NETWORK`。其三，UDP 在节点未启用 UDP 时仍会继续向下匹配；逻辑规则命中代理组后，节点仍需自身支持 UDP，否则还会落到后面的 MATCH。",
+        "目标 IP 类规则可加 `no-resolve` 跳过解析，这与 SCRIPT 无关，只是迁配置时常见的连带修改。旧脚本若包含运行时计算或外部状态，那部分无法用 AND/OR/NOT 完全复现。能复现的是静态条件组合。先把静态部分改完，再处理剩余分支。不要把旧 Clash Premium 的 SCRIPT 行原样贴进当前内核。",
+        "参考资料：\nhttps://wiki.metacubex.one/en/config/rules/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

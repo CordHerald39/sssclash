@@ -1,0 +1,54 @@
+{
+  "title": "Clash 电脑端：纯 IP 连接嗅探不到域名要不要开 parse-pure-ip",
+  "description": "Clash 电脑端：纯 IP 连接嗅探不到域名要不要开 parse-pure-ip。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-4e9f9a46e27c",
+  "category": "故障排查",
+  "tags": [
+    "Clash parse-pure-ip 嗅探不到",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "纯 IP 连接嗅探不到域名时先看 parse-pure-ip",
+      "paragraphs": [
+        "sniffer 并不是对每一条连接都去解 TLS。手册把 parse-pure-ip 定义为：对所有未获取到域名的流量进行强制嗅探，示例默认为 true。关掉以后，目标从一开始就是纯 IP、过程中也没有域名映射的连接，不会进入 HTTP/TLS/QUIC 解析。规则侧只能看到 IP，DOMAIN 类规则全部落空。这和已经有主机名、再嗅探校验不是同一条路径。",
+        "force-dns-mapping 的对象是 redir-host 类型识别出的流量，用于强制嗅探，并不能给从未出现过域名的纯 IP 补上 SNI。enhanced-mode 处于 fake-ip 时，多数访问会先有假 IP 与域名的对应，看起来像自带 mapping；redir-host 则更多依赖此前解析到的名字。两种模式下，真正直连字面量 IP 的程序，仍然受 parse-pure-ip 开关支配。应用若使用自己的 DNS 且结果不经过内核 mapping，对 Clash 而言就是纯 IP，打开 force-dns-mapping 没有意义。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "同一目标上做三次对照",
+      "paragraphs": [
+        "选一个地址栏或应用配置里就是 IP 的目标，端口落在 sniff 声明范围内，然后只改一个字段：\n1. 记录 enable、parse-pure-ip、force-dns-mapping、enhanced-mode。\n2. 仅设 parse-pure-ip 为 false 并重载，重连同一 IP。若域名消失、规则改为 IP 匹配，说明该流量属于未获取到域名。\n3. 改回 true，确认嗅探结果回来。\n4. 保持 parse-pure-ip 不变，只切换 fake-ip 与 redir-host，再重复开关。force-dns-mapping 只在 redir-host 识别路径上按文档工作；不要用它解释 fake-ip 里纯 IP 直连的成败。",
+        "判断依据是同一目的 IP、同一端口、同一进程。只有 parse-pure-ip 为 true 时才出现域名，才值得打开它。两种模式都没有域名，应检查 sniff 协议与 ports，以及 skip-dst-address 是否覆盖该 IP。文档跳过示例为 192.168.0.3/32。对照时不要顺便改入站或系统代理，以免路径一起变掉。",
+        "```yaml\nsniffer:\n  enable: true\n  force-dns-mapping: true\n  parse-pure-ip: true\n  override-destination: false\n  sniff:\n    TLS:\n      ports: [443, 8443]\n    QUIC:\n      ports: [443, 8443]\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "不该打开的场景和常见误判",
+      "paragraphs": [
+        "内网健康检查、必须按 IP 访问的接口、以及证书名字与路由无关的流量，打开 parse-pure-ip 可能把 SNI 写进规则，甚至在 override-destination 为 true 时改掉实际目的（手册写明该项默认 true）。这类目标应保持 false，或用 skip-src-address、skip-dst-address 排除网段。skip-domain 与 force-domain 都是域名通配，纯 IP 阶段没有名字，加进去不会产生映射。",
+        "不要用另一个能打开的域名站点当对照，那条连接往往已经有 mapping，不经过纯 IP 分支。也不要同时改 sniff 端口和 parse-pure-ip，否则无法判断是端口没声明还是纯 IP 被跳过。HTTP 段示例端口是 80 与 8080-8880，只对明文 HTTP 有意义。结论只能来自同一纯 IP 目标在单一开关前后的差异：开则出现域名且域名规则命中，关则回到裸 IP，才能认定需要 parse-pure-ip。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/sniff/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

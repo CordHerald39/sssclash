@@ -1,0 +1,61 @@
+{
+  "title": "Clash 电脑端（WSL）：子系统 curl 超时，要不要改成 Windows 宿主 IP",
+  "description": "Clash 电脑端（WSL）：子系统 curl 超时，要不要改成 Windows 宿主 IP。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-a93cd1741e97",
+  "category": "故障排查",
+  "tags": [
+    "Clash WSL2 代理 127.0.0.1 超时",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "WSL 默认采用 NAT，子系统在网络上等于另一台机器。Clash 跑在 Windows 时，发行版里 curl 127.0.0.1 上的代理端口超时，不能说明 Clash 没启动，只能说明打到了 Linux 自己的回环。要不要改成 Windows 宿主 IP，先看当前是 NAT 还是镜像网络。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "区分 NAT 与镜像网络",
+      "paragraphs": [
+        "NAT 下，Windows 查询发行版地址用 wsl.exe --distribution 发行版名 hostname -I；发行版查询 Windows 用 ip route show | grep -i default | awk '{ print $3}'。后者即默认网关，也是宿主在虚拟网卡上的地址。Linux 程序要连 Windows 上的服务，必须用该地址，不能用 127.0.0.1。",
+        "镜像网络需 Windows 11 22H2 及以上，在 .wslconfig 的 wsl2 段设置 networkingMode=mirrored。此后双方可用 127.0.0.1 互连，IPv6 的 ::1 不受支持。已开镜像时，改宿主 IP 不是必选项，应先用 127.0.0.1 对照。",
+        "判断：WSL 里访问 127.0.0.1 代理端口失败、访问默认网关同一端口成功，就是 NAT 下连错回环；两者都失败，再查 Windows 是否只监听回环、是否允许局域网。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "NAT 下改用默认网关",
+      "paragraphs": [
+        "1. 在 WSL 取出默认网关地址。\n2. 用该地址加代理端口测试。成功则只改环境变量，不必改分流规则。\n3. 用远程 IP 连接会被当成来自局域网，应用必须接受局域网连接，应绑定 0.0.0.0 而不是 127.0.0.1。Clash 侧对应 allow-lan 与 bind-address。\n4. hostname 大写 I 与小写 i 不同：大写 I 才是其他机器看到的地址，不要用小写 i 的占位地址填代理。",
+        "从局域网访问 WSL 2 内服务要用 portproxy，方向相反，不要和「WSL 访问 Windows 上的 Clash」混用。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "代理端口允许局域网并处理鉴权",
+      "paragraphs": [
+        "allow-lan 为 true 后，其他设备才能经过代理端口访问。bind-address 为 * 绑定全部地址；写成单一地址时，必须是 WSL 默认网关能送到的那一块。lan-allowed-ips 默认放行全部，若已收紧，把 WSL NAT 网段加进去。lan-disallowed-ips 黑名单优先。",
+        "开启 authentication 时，skip-auth-prefixes 默认只有 127.0.0.1/8 与 ::1/128。NAT 下 WSL 源地址不在回环段，会被要求账号。把 WSL 网段写入 skip-auth-prefixes，或在 WSL 代理变量里带上账号，不要继续使用 127.0.0.1。",
+        "镜像模式虽可用 127.0.0.1，Windows 11 22H2 且 WSL 2.0.9 以上会默认打开 Hyper-V 防火墙，需在提升权限的 PowerShell 中允许入站，否则即使用回环也会被挡。这与 allow-lan 是两层控制。",
+        "验收：NAT 下访问 127.0.0.1 失败、访问默认网关成功；allow-lan 开启且 bind-address 覆盖该网关；鉴权前缀包含 WSL 网段或请求已带账号。满足这些再改成 Windows 宿主 IP 才是对症。",
+        "参考资料：\nhttps://learn.microsoft.com/en-us/windows/wsl/networking\nhttps://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

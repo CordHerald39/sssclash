@@ -1,0 +1,60 @@
+{
+  "title": "Clash Verge Rev 电脑端：编辑规则还在，运行时为什么只剩 MATCH,DIRECT",
+  "description": "Clash Verge Rev 电脑端：编辑规则还在，运行时为什么只剩 MATCH,DIRECT。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-1fa00187e1d4",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge 编辑规则 MATCH DIRECT",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "订阅右键「编辑规则」里前置、后置规则都还在，规则页却只剩 `MATCH,DIRECT`，通常不是规则被删掉，而是「链式覆写文件」和「交给内核的运行配置」已经不是同一份文本。文档写明：右键订阅配置文件选择「编辑规则」后，这里改的规则不会随着订阅更新而失效。v1.7.x 起，扩展配置里的 prepend/append 已挪到该可视化编辑器（例如 prepend-rules 对应「编辑规则」里的 prepend），扩展配置只负责配置项覆写或合并。编辑器完整只说明覆写文件还在；生成运行配置时若没合并进去，规则页就会只剩兜底的 `MATCH`。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先看运行时配置，不要只在编辑器里反复保存",
+      "paragraphs": [
+        "1. 停手，不要在「编辑规则」里连续保存。保存成功只表示覆写文件可写，不表示这次生成运行配置时已经读入。\n2. 打开当前内核正在使用的配置，直接看 `rules`。若只有 `MATCH,DIRECT` 或极短几条，而编辑器里仍有 `DOMAIN`、`DOMAIN-SUFFIX`、`GEOSITE`、`GEOIP`、`PROCESS-NAME` 等，即可判定是合并缺失，而不是规则没匹配到流量。\n3. 用文档示例做对照，例如应出现在前置位置的 `DOMAIN-SUFFIX,cn,DIRECT`、`GEOIP,CN,DIRECT`。编辑器有、运行时无，就是覆写未进入最终 YAML。\n4. 规则从上到下依次匹配，命中第一条即停止；`MATCH` 必须放在最后。运行时只看见兜底，说明前面的行从未进入列表，而不是被后面的规则抢走。",
+        "判断依据：编辑器与运行时的 `rules` 条数或内容不一致，按生成链路排查；两者一致仍分流不对，再查规则第三段的策略组名称是否写错、宽泛规则是否排在了前面。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "确认当前激活的就是这份订阅，并找出谁把 rules 整表换掉",
+      "paragraphs": [
+        "链式覆写只绑在你右键的那一张配置上。首页当前启用的若是另一份远程订阅或 Local 文件，运行时当然看不到你在 A 上写的前置、后置规则。",
+        "1. 核对正在启用的文件名，是否就是刚才选择「编辑规则」的那一张，而不是刚导入的副本。\n2. 订阅更新按文档不应清空这些自定义规则。更新后编辑器仍在、运行时变短，更说明生成时没用上覆写文件。\n3. 检查全局扩展配置、订阅扩展配置有没有写出 `rules`。扩展配置只改写出的字段；对 `rules` 这类列表是整体替换。任何一层写出完整 `rules:`，都会盖掉上一步，包括可视化编辑器的 prepend/append 结果。\n4. 执行顺序为：订阅原文 → 应用设置 → 全局扩展配置 → 全局扩展脚本 → 订阅扩展配置 → 订阅扩展脚本 → 应用设置回写。应用会接管 `mode`、端口、`tun.enable` 等字段并在末尾写回，但 `rules` 不在接管名单里。更常见的是某层扩展把规则列表整段换成了只含 `MATCH` 的短数组。",
+        "判断依据：切换到其他配置后规则页立刻变短，是看错激活对象；扩展 YAML 里出现独立 `rules` 列表，是整表替换。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把自定义规则写进扩展脚本后再重载",
+      "paragraphs": [
+        "可视化编辑器保存多次仍不进运行时，按链路把规则放到最后执行的订阅扩展脚本，在 `main(config)` 里改 `config.rules`，然后重载这份配置。脚本只演示数组操作：",
+        "```javascript\nfunction main(config) {\n  config.rules = config.rules || [];\n  config.rules.unshift(\"GEOIP,CN,DIRECT\");\n  config.rules.unshift(\"GEOSITE,cn,DIRECT\");\n  return config;\n}\n```",
+        "步骤：右键该配置卡片，选择编辑扩展/脚本，用 `unshift` 把高优先级规则插到数组前部，并保证最后仍有 `MATCH`；全局和订阅扩展配置不要再写一整段 `rules`，以免整体替换；重载后必须再打开运行时 YAML 核对，而不是只看编辑器。文档建议自定义规则放前置规则，脚本里同样应插在 `MATCH` 之前。若重载后仍只有兜底，回头查激活对象、脚本是否未执行、以及是否有一层扩展把列表换空。不要把「编辑器里保存」当成「内核已经合并」。",
+        "资料：\nhttps://www.clashverge.dev/guide/rules.html\nhttps://www.clashverge.dev/guide/extend.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

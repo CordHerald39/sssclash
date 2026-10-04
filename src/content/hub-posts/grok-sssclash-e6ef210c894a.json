@@ -1,0 +1,55 @@
+{
+  "title": "Clash 电脑端：Chrome 走 HTTP/3 时域名规则没命中要开 QUIC 嗅探吗",
+  "description": "Clash 电脑端：Chrome 走 HTTP/3 时域名规则没命中要开 QUIC 嗅探吗。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e6ef210c894a",
+  "category": "故障排查",
+  "tags": [
+    "Clash Chrome HTTP3 规则不命中",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "现象：Chrome 走 HTTP/3 时规则只看到 IP",
+      "paragraphs": [
+        "电脑端 Chrome 若启用 HTTP/3，站点会走 UDP 443 上的 QUIC，而不是 TCP 443 的 TLS。mihomo 的域名嗅探按协议分开写：手册写明 sniff 只支持 HTTP、TLS、QUIC，并且每种都要声明 ports。只写 TLS 的 443 不会连带处理 QUIC。QUIC 初始包不是 TLS ClientHello，sniffer 读不到 SNI，路由看到的仍是 DNS 解析后的裸 IP。DOMAIN、DOMAIN-SUFFIX 以及按域名写的规则集全部不会命中，连接掉进 IP 规则或最终 MATCH。",
+        "判断依据要同时满足：协议是 UDP，目的端口是 443，连接目标显示为 IP 而不是主机名。缺任何一条，先别断定是 QUIC 嗅探问题。例如 TCP/443 仍显示 IP，应去查是否根本没有域名映射，而不是先加 QUIC 端口。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "在 sniff.QUIC 声明端口的步骤",
+      "paragraphs": [
+        "把 sniffer.enable 设为 true。在 sniff 下增加 QUIC，ports 按手册示例覆盖 443 与 8443，并保留 TLS 同样端口，以便浏览器回退 TCP 时仍能嗅探。override-destination 表示是否用嗅探结果作为实际访问，手册写明默认 true。若只想让规则看到域名、不改真实目的地址，把全局项设为 false；子协议里的同名字段会覆盖全局。",
+        "建议一次只改嗅探，不改规则、不换出口：\n1. 写入 QUIC 端口并重载配置。\n2. 结束浏览器相关进程后重访同一 URL，避免复用旧 UDP 会话。\n3. 检查目标是否变为域名、原先落空的域名规则是否命中。\n4. 仍为 IP 时，核对 skip-domain、skip-dst-address、skip-src-address。文档里跳过地址示例是 192.168.0.3/32 这种 CIDR。force-domain 只对已有域名强制嗅探，不能给裸 IP 的 QUIC 造出主机名。",
+        "HTTP 的 ports 示例是 80 与 8080-8880，与 HTTP/3 无关，不要把 UDP/443 写进 HTTP 段。重载后如果连接仍显示 UDP/443 但目标已是域名，说明嗅探已工作，接下来只看规则顺序。如果目标仍是 IP，不要同时打开 parse-pure-ip 和 QUIC 端口再观察，那样无法区分是纯 IP 未嗅探还是 QUIC 未声明。",
+        "```yaml\nsniffer:\n  enable: true\n  override-destination: false\n  sniff:\n    TLS:\n      ports: [443, 8443]\n    QUIC:\n      ports: [443, 8443]\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "关闭浏览器 QUIC 做对照",
+      "paragraphs": [
+        "不改内核时，可在 Chrome 关闭 QUIC，让同一地址改走 TCP TLS。对照必须单一变量：节点、规则、嗅探开关都不变，只切换浏览器 QUIC。关闭后域名规则命中、打开后又变回 IP，即可确认缺口在 UDP 路径缺少 QUIC 嗅探。若关闭 QUIC 后仍然是 IP，问题在域名映射，继续加 QUIC 端口没有意义。",
+        "不要把换节点后页面能开当成域名规则已命中，那只说明 MATCH 或 IP 规则指向了可用出口。QUIC 嗅探成功后，仍要用规则日志确认命中的是域名规则而不是碰巧的 IP-CIDR。否则以后解析结果变化，同一站点又会偏离预期出口。浏览器或系统代理若绕过当前入站，上述对照全部无效，需先确认流量确实进入这份配置。排查结束后，需要域名规则稳定工作就保留 QUIC 嗅探；个别站点握手异常，再用 skip-dst-address 定点跳过，而不是删掉整个 sniff。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/sniff/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

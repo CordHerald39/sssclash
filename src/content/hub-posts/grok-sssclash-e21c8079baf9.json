@@ -1,0 +1,59 @@
+{
+  "title": "Clash Meta 手机端（Android）：关掉代理后 WebView 还提示代理连接失败",
+  "description": "Clash Meta 手机端（Android）：关掉代理后 WebView 还提示代理连接失败。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e21c8079baf9",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta 关掉后浏览器还走代理",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "troubleshooting",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "关掉 Clash Meta 代理之后，部分应用里的 WebView 仍提示代理连接失败，页面打不开，但已经重新拉起进程的应用又正常。这种分裂现象和 VPN 网络上的系统 HTTP 代理有关。从 Android 10 起，Clash Meta 可以在建立 TUN 时调用 setHttpProxy，把 HTTP 代理下发到这条 VPN 网络。断开隧道后，WebView 若仍缓存该代理，就会继续向已经不存在的代理端口发请求，于是出现 ERR_PROXY_CONNECTION_FAILED。先确认是不是这条链路，再决定要不要强杀 WebView 进程。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "系统 HTTP 代理是何时被写上的",
+      "paragraphs": [
+        "TunService 在打开 TUN 设备时使用 VpnService.Builder。当系统版本大于等于 29（对应 Android 10）并且服务存储里 systemProxy 为真时，代码会 listenHttp，再对 Builder 执行 setHttpProxy。代理对象由 ProxyInfo.buildDirectProxy 构造，参数包括监听地址、端口，以及排除列表。排除列表由 HTTP_PROXY_BLACK_LIST 组成，在开启绕过私有网络时还会并上 HTTP_PROXY_LOCAL_LIST，其中包含 localhost、\\*.local、127.\\*、10.\\*、172.16.\\* 到 172.31.\\*、192.168.\\* 等。",
+        "判断依据：只有 Android 10 及以上、并且当时启用了系统代理选项，这条 VPN 网络才会带 HTTP 代理。更低版本不会走 setHttpProxy。若从未打开系统代理，关掉隧道后 WebView 仍报代理失败，应优先查应用自己的代理设置，而不是这段 Builder。还要注意：排除列表只在代理启用期间让部分主机名不走该 HTTP 代理，它不会在断开后替 WebView 擦掉已经记下的代理。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "断开之后为什么 WebView 还会走代理",
+      "paragraphs": [
+        "TunService 销毁时会 requestStop、把 serviceRunning 置为假、发送已停止广播，并在协程里关闭 TUN、调用 stopSelf。系统侧拆除 VPN 后，按理该网络上的 HTTP 代理应一并失效。但 WebView 往往运行在独立渲染进程里，可能在 VPN 活动期间读取了网络的代理信息并缓存在进程内。隧道没了，代理主机和端口也不再监听，WebView 仍按旧代理建连，就会得到代理连接失败。",
+        "对照步骤如下。第一，确认问题出现在关掉代理之后，而不是代理开启期间；开启期间失败应查节点与规则。第二，确认故障应用使用 WebView 或内置网页组件，而不是已经重建进程的独立浏览器。第三，强制停止该应用后再打开同一页面；进程被杀掉后应重新查询当前网络代理。第四，若强制停止后立刻恢复，即可判断为进程内代理残留。第五，仍失败时，检查是否还有钥匙图标，说明隧道其实没拆干净。判断依据：强制停止 WebView 所在应用后症状消失，指向缓存；所有应用都失败且图标还在，指向服务未真正销毁。setHttpProxy 绑的是当前 Builder 建立的那条 VPN 网络，不是全局永久代理配置。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "和访问控制、绕过名单分开看",
+      "paragraphs": [
+        "同一段 Builder 还会按 accessControlMode 调用 addAllowedApplication 或 addDisallowedApplication，并在允许绕过时 allowBypass。这些影响的是哪些应用的流量进 TUN，并不负责清除 WebView 里已经记下的 HTTP 代理。HTTP_PROXY_BLACK_LIST 里的主机名排除同样只作用于代理启用阶段。把「关掉后仍提示代理失败」理解成规则没命中，会浪费在改配置上。",
+        "处理顺序应是：先确认 Android 10 及以上且用过系统代理，再确认关掉后只对 WebView 失败，然后强制停止该应用并复查。若必须避免残留，断开后不要让 WebView 进程跨 VPN 生命周期长期复用。隧道销毁日志里出现 TunService destroyed，只说明服务侧已收尾，不能代替 WebView 进程重新读取网络代理。二者不同步时，优先处理 WebView 进程，而不是反复开关节点。",
+        "参考资料：",
+        "https://github.com/MetaCubeX/ClashMetaForAndroid/blob/main/service/src/main/java/com/github/kr328/clash/service/TunService.kt"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

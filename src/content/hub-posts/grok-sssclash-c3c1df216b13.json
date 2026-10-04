@@ -1,0 +1,53 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：规则拒绝 HTTP/3 后连接列表为什么还不空",
+  "description": "Clash Verge Rev 电脑端（macOS）：规则拒绝 HTTP/3 后连接列表为什么还不空。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-c3c1df216b13",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge HTTP3 REJECT 连接不消失",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "端口拒绝 HTTP/3 后列表里的 UDP 不一定在转发",
+      "paragraphs": [
+        "macOS 上 Clash Verge Rev 常见写法是 DST-PORT 443 配合 NETWORK UDP，把非大陆 HTTP/3 送到 REJECT。规则命中后，内核不应再把载荷交给代理节点。连接页却可能长时间留着 0 字节、类似于 Inner(udp) 的条目。这只说明会话还挂在列表里，不能当成节点仍在转发。若据此去换节点或改 DNS，会把界面生命周期问题当成泄漏。",
+        "HTTP/3 对应 sniff 中的 QUIC，手册示例端口为 443 与 8443。未声明 QUIC 时，UDP/443 往往匹配不到域名规则，只能落到端口规则。端口 REJECT 之后，界面仍可能展示这条被拒绝的 UDP，直到超时回收。列表非空和规则未命中不是一回事。连接列表的刷新间隔由客户端决定，内核已拒绝并不保证界面立刻消失。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "用流量计数区分 REJECT 与未清除",
+      "paragraphs": [
+        "按下面对照，每次只动规则或嗅探之一：\n1. 将 NETWORK UDP 与 DST-PORT 443 明确指向 REJECT，并确认前面没有更宽的 MATCH 把该流量送去代理。\n2. 触发 HTTP/3 访问，看条目的上下行是否长期为 0、出站是否为拒绝。长期 0 字节即可认为没有转发。\n3. 临时去掉该 REJECT 或改为 DIRECT，若立刻出现非零字节，说明前一步确实拦住了载荷。\n4. 打开 QUIC 嗅探后再看目标：从纯 IP 变成域名，说明此前拒绝的是未嗅探流量。之后应用域名规则维护拒绝列表，减少误伤其它 UDP/443。",
+        "skip-dst-address 只跳过嗅探，不能代替 REJECT。parse-pure-ip 决定纯 IP 会不会被嗅探，也不负责把会话从列表删除。force-dns-mapping 仅针对 redir-host 识别的流量。若 UDP 与 TCP 同时出现在列表里，分别看两条的出站和计数，不要用整页是否为空下结论。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "DNS 开关不会清空 Inner(udp)",
+      "paragraphs": [
+        "dns.prefer-h3 只影响 DoH 是否优先 HTTP/3，ipv6 为 false 时对 AAAA 回空，二者都不会把连接页里的 UDP 条目清掉。respect-rules 让 DNS 查询遵守路由，手册不建议与 prefer-h3 同用，且需要 proxy-server-nameserver。站点 QUIC 被拒后，浏览器可能回退 TCP，于是列表上同时存在已拒绝的 UDP 和新建 TCP，属于并存，不是拒绝失败。",
+        "若条目出现真实上行，再查规则是否未落到 REJECT，以及 override-destination 是否把目的改写成域名从而绕开端口规则。该项默认 true。需要拦 HTTP/3 时，可把 override-destination 设为 false，或把嗅探到的域名写入明确拒绝规则。成功标准是计数为 0 且出站为拒绝，而不是列表被清空。不要用 nameserver 或 fallback 的更换来解释 0 字节 UDP 残留，那两条只影响解析结果，不负责回收已拒绝会话。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/sniff/\nhttps://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

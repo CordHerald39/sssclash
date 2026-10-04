@@ -1,0 +1,54 @@
+{
+  "title": "Clash 电脑端：日志提示嗅探无数据后网站打不开要不要加 skip",
+  "description": "Clash 电脑端：日志提示嗅探无数据后网站打不开要不要加 skip。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-49e831477478",
+  "category": "故障排查",
+  "tags": [
+    "Clash 嗅探 may not have any sent data",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "日志提示嗅探无数据时不要先换节点",
+      "paragraphs": [
+        "部分 HTTPS 站点在握手早期没有足够载荷给 sniffer，或载荷对 HTTP/TLS/QUIC 解析器不可读。连接已按目的 IP 进入路由，域名规则未命中，页面表现为打不开。手册给出的规避字段是 skip-domain、skip-src-address、skip-dst-address。若日志建议考虑添加 skip，应理解成该目标不适合嗅探，而不是出口失效。先换节点只能验证 IP 连通，不能解释无载荷。",
+        "判断前先确认：失败连接的协议与端口是否写进 sniff；enable 是否为 true；skip 列表是否已包含该地址。端口不在列表内时，本来就不会嗅探，日志无数据是预期行为。TLS 与 QUIC 的示例端口是 443 与 8443，HTTP 是 80 与 8080-8880。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "对失败目标做关嗅探和 skip 对照",
+      "paragraphs": [
+        "固定 URL 与出口，做三次单一变量实验：\n1. 设 sniffer.enable 为 false。若站点恢复，说明嗅探过程干扰握手或改写了目的，问题不在节点。\n2. 重新打开 enable，仅把该目的 IP 写入 skip-dst-address。文档示例写法是 192.168.0.3/32。恢复则只需定点跳过。\n3. 失败目标若已有域名，用 skip-domain 的域名通配。来源异常时用 skip-src-address。force-domain 会强制嗅探，对无载荷站点应避免加入。",
+        "不要同时改 override-destination 和 skip。override-destination 默认 true，会把嗅探结果当作实际访问；无数据时覆盖可能指向空名字。只需规则看到域名、不改真实目的时，把该项设为 false。对照完成后再扩大名单，避免一次加入大量未验证地址。",
+        "```yaml\nsniffer:\n  enable: true\n  override-destination: false\n  sniff:\n    HTTP:\n      ports: [80, 8080-8880]\n    TLS:\n      ports: [443, 8443]\n  skip-dst-address:\n    - 192.168.0.3/32\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "何时加 skip、何时回头查端口和纯 IP",
+      "paragraphs": [
+        "加 skip 的依据：关闭嗅探或跳过该 IP 后握手成功，并且该目标不依赖域名规则。关嗅探仍失败，应去查 DNS 与规则顺序，而不是继续追加 skip。parse-pure-ip 会对未获取域名的流量强制嗅探，纯 IP 又没有可解析载荷时，同样会无数据，应对网段使用 skip-dst-address，而不是无限提高嗅探范围。",
+        "force-dns-mapping 只对 redir-host 类型识别的流量强制嗅探，对本来就没有载荷的包没有帮助。skip 列表应写最小范围；把大段公网写进 skip-dst-address 等于对这些地址放弃域名规则，后续故障会更难解释。处理顺序是对照、定点 skip、最后才全局关闭 sniffer。用另一个正常站点当成功样例没有意义，那些站点往往握手载荷完整。把 skip 当作临时隔离，名单应只保留已经对照过的地址或域名。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/sniff/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

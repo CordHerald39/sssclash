@@ -1,0 +1,59 @@
+{
+  "title": "Clash 电脑端（Linux）：容器里填 127.0.0.1 为什么连不上本机 Clash",
+  "description": "Clash 电脑端（Linux）：容器里填 127.0.0.1 为什么连不上本机 Clash。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6caee9045aef",
+  "category": "操作教程",
+  "tags": [
+    "Clash Linux 容器 127.0.0.1 连不上代理",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "容器里把代理填成 127.0.0.1 加本机 Clash 端口，几乎连不上。容器网络命名空间里的 127.0.0.1 是容器自己，不是宿主机。要连本机入站，应填 docker0 网关或 host-gateway，并打开 allow-lan、正确设置 bind-address；NO_PROXY 还要排除容器网段，避免内部互访被送进代理。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "确认失败的是容器自己的回环",
+      "paragraphs": [
+        "1. 容器内访问 127.0.0.1 加代理端口立即被拒绝，而宿主机同端口可访问，说明回环没有跨命名空间。\n2. 容器内查看默认网关，一般是 docker0 一侧；对该网关加同一端口再测，能通则说明 Clash 已监听并放行了网桥。\n3. 网关能通、代理端口拒绝，应查 allow-lan、bind-address 和鉴权，而不是继续改 127.0.0.1。",
+        "入站能否从网桥访问，取决于监听地址、系统路由和防火墙，与 HTTP、SOCKS、Mixed 分类无关。mixed-port 若只绑回环，容器进不去。判断依据是：错误地址表现为连接拒绝，放行缺失表现为超时或鉴权失败。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改用网关并打开局域网放行",
+      "paragraphs": [
+        "1. 宿主机用 ip addr show docker0 记录网关，或在 Compose、run 中使用 host-gateway，让主机名解析到网关。\n2. 容器的 HTTP_PROXY、HTTPS_PROXY 填写网关加 mixed-port，不要填 127.0.0.1。\n3. allow-lan 设为 true。bind-address 使用 * 或至少包含 docker0 地址；文档也允许绑单个 IPv4，但必须是网桥能路由到的地址。只绑 127.0.0.1 时，来自网关的 SYN 进不了 Clash。\n4. lan-allowed-ips 若非默认，写入容器网段。lan-disallowed-ips 优先级更高，不要把网桥或容器 CIDR 放进黑名单。\n5. 启用 authentication 时，skip-auth-prefixes 默认只有 127.0.0.1/8 与 ::1/128。容器源 IP 不在其中，需要把容器网段加入，或在代理凭据里提供用户名密码。",
+        "顶层 mixed-port 适合单组固定端口。需要不同入站不同绑定时再用 listeners，并单独指定监听地址。未启用 TLS 的 Mixed 不应直接暴露到公网。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "NO_PROXY 排除容器网段",
+      "paragraphs": [
+        "容器若全局走代理，访问同一 Docker 网络内的服务也会打到 Clash，内部主机名会超时或被规则丢掉。NO_PROXY 应排除容器网段（如 172.16.0.0/12 或项目实际 CIDR）、localhost 与 127.0.0.1，以及仅内网使用的仓库、数据库主机名。",
+        "宿主机若也设置了代理变量，同样要把容器网段放入 NO_PROXY，否则访问映射端口会被送进 Clash，和回环填错叠在一起更难拆。",
+        "验收：容器访问 127.0.0.1 的代理端口仍应失败，这是命名空间正确的表现；访问 docker0 网关或 host-gateway 成功；同网段互访不经过代理；ss 能看到非回环监听。不要用宿主机浏览器能出网，推断容器已经连上本机 Clash。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/general/\nhttps://wiki.metacubex.one/config/inbound/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

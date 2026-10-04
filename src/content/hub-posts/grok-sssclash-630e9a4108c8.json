@@ -1,0 +1,62 @@
+{
+  "title": "Clash Verge Rev 电脑端：两个规则源写了同一路径，重启内核失败",
+  "description": "Clash Verge Rev 电脑端：两个规则源写了同一路径，重启内核失败。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-630e9a4108c8",
+  "category": "故障排查",
+  "tags": [
+    "Clash 规则集 path 重复",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "troubleshooting",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Verge Rev 电脑端重启内核失败，日志里出现规则集合 path 被两个不同来源声明，通常不是订阅文件损坏，而是 `rule-providers` 里两条记录指向了同一相对路径。path 在全局范围内必须唯一。订阅里已经缓存了一份 `AppleDev.yaml`，覆写或第二个订阅又写了相同相对路径时，内核无法决定这个文件属于哪一个远程源，于是拒绝启动。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "path 为什么会变成冲突点",
+      "paragraphs": [
+        "每个规则集合先要有不重复的名称，例如不能出现两个都叫 google 的提供者。path 同样不可重复。它是可选字段：显式填写时，就是本地缓存文件的路径；不填写时，内核用 url 的 MD5 当作文件名。",
+        "两个提供者即使名称不同、url 不同，只要都写成 `./AppleDev.yaml` 或其它完全相同的相对路径，就等于抢同一个缓存文件。文档要求 path 不可重复。这和“内容是否一样”无关：即使两份远程列表完全相同，也不能共用一个落盘文件。",
+        "path 还受安全限制。默认只允许写在 HomeDir（启动参数 `-d` 指定的目录）里。想存到别处，要设置环境变量 `SAFE_PATHS`，语法和系统 PATH 相同，Windows 用分号分隔。路径不合法和路径重复是两类错误：前者是越界，后者是两个来源争同一文件。把文件挪到 HomeDir 并不能消除重复声明。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "按配置表排查，不要先删订阅",
+      "paragraphs": [
+        "第一步，打开当前生效配置，搜索 `rule-providers`。把每个提供者的 name、type、path、url 列成表。重点看 path 是否出现两次，以及未填 path 的 http 源，其 MD5 文件名会不会和别人手写的文件名撞车。",
+        "第二步，检查 Clash Verge Rev 的覆写。订阅已经声明过 AppleDev 一类规则集合时，覆写里再写同 path 或同名项，重启内核就会失败。处理办法是删掉覆写里的重复项，只保留一处定义。需要改行为或间隔时，改那一处，而不是再复制一份。",
+        "第三步，确实需要两份相近内容时，给每个提供者单独 path，例如 `./rules/apple-sub.yaml` 与 `./rules/apple-override.yaml`，名称也要分开。不要共用一个缓存文件。",
+        "第四步，type 为 file 的本地源和 type 为 http 的远程源也不能指向同一 path。inline 类型用 payload 内嵌内容，一般不占用这份缓存，但名称仍然不能和其他提供者重复。http 源的 url 不要填虚构完整地址；若只是占位，写参数片段例如 `token=示例` 即可。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "怎样判断冲突已经消除",
+      "paragraphs": [
+        "判断依据是内核能够完成启动，并且每一条 path 只对应一个来源。日志里若出现 declared for two different sources，或明确提示同一 path 被两个源使用，就是本问题。界面刷新成功不能单独当作修好。",
+        "修好后应满足：配置里每条 path 只出现一次；未写 path 的项依赖 url 的 MD5，不再和手写文件名重叠；覆写中不再重复订阅已经声明的规则集合。改完后重新加载内核。若仍失败，再查名称是否重复、path 是否跑出 HomeDir。后两项不会写出“两个来源同一路径”这句，但会让你误判成 path 冲突。",
+        "不要为了省事让多个规则集合共用一个 yaml。缓存文件是提供者身份的一部分，不是可以随便复用的临时目录。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/rule-providers/\nhttps://wiki.metacubex.one/en/config/rule-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

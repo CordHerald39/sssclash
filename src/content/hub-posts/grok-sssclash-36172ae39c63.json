@@ -1,0 +1,66 @@
+{
+  "title": "Clash Verge Rev 电脑端：扩展脚本里为什么拿不到 proxy-providers 的节点",
+  "description": "Clash Verge Rev 电脑端：扩展脚本里为什么拿不到 proxy-providers 的节点。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-36172ae39c63",
+  "category": "配置教程",
+  "tags": [
+    "Clash Verge 扩展脚本 没有节点",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在扩展脚本的 `main(config)` 里遍历 `config.proxies` 想合并多个机场时，数组经常是空的，或只有 Local 里手写的几项。原因不是脚本没执行，而是脚本改的是即将交给内核的那份 YAML：`proxy-providers` 此时仍是远程集合声明，内核稍后才会按 `url` 下载到 `path`。脚本阶段不会把集合展开进 `config.proxies`，脚本也没有网络去 fetch 订阅。多订阅合并的做法是把提供者写进 Local 配置，再在 `proxy-groups` 里用 `include-all` 或按名称引用；要改节点名，用提供者的 `override`，不要在脚本里扫描空数组。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "脚本看见的 YAML 里，providers 还没有变成 proxies",
+      "paragraphs": [
+        "Local 配置上半部通常是集合声明，而不是已展开的节点列表：",
+        "```yaml\nproxy-providers:\n  1.provider1:\n    type: http\n    path: ./proxy_provider/p1.yaml\n    interval: 21600\n    override:\n      additional-prefix: \"p1 |\"\n```",
+        "`url` 填写你的订阅，示例不要写完整网址，只保留 `token=示例` 这类参数。内核拿到这份配置后，自己去拉 `path` 缓存。扩展脚本运行在把 YAML 交给内核之前，因此：",
+        "- `config[\"proxy-providers\"]` 里能看到名称、type、path、interval、override；\n- `config.proxies` 不会自动出现机场节点；\n- 在脚本里请求订阅既无这一层的职责，也不会写入 provider 缓存。",
+        "判断依据：脚本里看到 `config.proxies` 长度为 0 或只有手写节点，同时 `proxy-providers` 键存在，属于正常时序，不是合并失败。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "合并多机场：写进 Local，用 include-all 或 use 引用名称",
+      "paragraphs": [
+        "合并示例里的策略组并不枚举每个节点名，而是让内核在加载 provider 之后纳入节点：",
+        "```yaml\nproxy-groups:\n  - name: 手动选择\n    type: select\n    proxies: [DIRECT, 自动选择]\n    include-all: true\n  - name: 自动选择\n    type: url-test\n    proxies: [DIRECT]\n    include-all: true\n```",
+        "`include-all: true` 在内核加载集合之后把节点放进组。需要更细的引用时，用组的 `use` 指向 provider 名称。名称必须填写且不能重复，建议不要和策略组重名。筛选写在对应 provider 上：`filter`、`exclude-filter` 用关键词或正则，`exclude-type` 用 `|` 分割类型、不支持正则。",
+        "步骤：",
+        "1. 每个机场合一个 http provider，`path` 不可重复，`interval` 单位为秒。\n2. 策略组用 `include-all` 或 `use` 引用这些名称，不要指望脚本把节点推进 `proxies` 数组。\n3. `rules` 仍按分流需要来写，示例中有 `GEOSITE,CN,DIRECT`、`GEOIP,CN,DIRECT`、`MATCH,手动选择`。\n4. 重载 Local 配置后，在内核已加载 provider 的界面查看节点，而不是在脚本日志里找展开结果。",
+        "判断依据：组能选到带前缀的节点，说明引用成功；脚本里 `proxies` 仍空，可以忽略。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改节点名用 override，不要遍历空的 proxies",
+      "paragraphs": [
+        "手册为 provider 提供 `override`：`additional-prefix` / `additional-suffix` 加固定前后缀；`proxy-name` 用 `pattern` 和 `target` 做正则替换；还可覆写 `tfo`、`udp`、`skip-cert-verify`、`dialer-proxy` 等。`override-expr` 是更晚执行的 yq v4 风格表达式，数组项按顺序，且晚于上面的固定字段。这些都在内核解析 provider 内容时生效，扩展脚本读不到展开后的名字。",
+        "不要写 `config.proxies.forEach(...)` 去改名或删节点。数组此时通常是空的，改了也不会写回 provider 缓存。正确做法：命名规则写进对应 provider 的 `override`，过滤写进 `filter` / `exclude-filter`。`payload` 仅 `type` 为 `inline` 时作为内容，或在 http/file 解析失败时当备用，不能代替脚本去展开远程订阅。",
+        "健康检查的 `interval` 只测延迟，`url` 可用 `https://www.gstatic.com/generate_204`，与脚本能否拿到节点无关。脚本职责是改结构（组、规则、dns 等），节点清单交给 `proxy-providers`。",
+        "资料：\nhttps://www.clashverge.dev/guide/config.html\nhttps://wiki.metacubex.one/config/proxy-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

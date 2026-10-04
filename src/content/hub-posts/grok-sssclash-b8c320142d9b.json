@@ -1,0 +1,53 @@
+{
+  "title": "Clash Verge Rev 电脑端（macOS）：ClashX Pro 的本地 YAML 为什么不要直接复制过去",
+  "description": "Clash Verge Rev 电脑端（macOS）：ClashX Pro 的本地 YAML 为什么不要直接复制过去。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-b8c320142d9b",
+  "category": "故障排查",
+  "tags": [
+    "ClashX 配置 导入 Clash Verge",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "本地 YAML 已经是旧内核加客户端加工后的成品",
+      "paragraphs": [
+        "ClashX Pro 侧长期搭配的是旧 Premium 内核配置习惯，增强模式、字段含义和覆写入口都和现在的 Mihomo GUI 不同。Clash Verge Rev 基于 Tauri，内置 Clash.Meta（mihomo）内核，并支持切换 Alpha；配置文件管理和增强走的是 Merge 与 Script（现文档中的扩展配置、扩展脚本），另有系统代理、TUN、可视化节点和规则编辑。把 ClashX Pro 目录里已经增强、混入过的本地 YAML 复制过去，等于把「旧内核 + 旧客户端预处理之后的成品」塞给另一套 GUI。",
+        "mihomo 的 rules 从 DOMAIN、GEOSITE、GEOIP、IP-ASN、RULE-SET 到 AND/OR/NOT、PROCESS-NAME 等，按从上到下的优先级匹配；UDP 请求遇到未声明 UDP 的节点会继续往下匹配。Premium 时期常见的策略组字段、增强模式写入的网卡和 DNS 劫持片段，并不保证和这份规则表一一对应。两份文件看起来都是 YAML，并不表示同一套内核会按同一路径执行。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "复制本地文件会和 Verge 的接管字段打架",
+      "paragraphs": [
+        "ClashX 本地文件往往是「订阅原文 + 增强模式 + 手动改过的端口和模式」的混合物。Verge 会在扩展之前写入应用设置，扩展之后把由它接管的字段写回，包括 external-controller、secret、mixed-port、mode、allow-lan、tun.enable，以及 TUN 对话框保存过的 stack、device、auto-route、dns-hijack 等。把成品 YAML 整份贴进 Verge，容易出现外部控制端口重复、TUN 双份、旧增强模式残留，而设置页里的值会在末尾覆盖你复制进去的同名字段。",
+        "因此，即使 diff 几乎一致，运行时仍可能以设置页为准。要保留「同一条机场订阅」，正确来源是订阅链接更新出来的原文，而不是 ClashX 已经写盘的那份。macOS 上尤其不要把增强模式相关的本地片段当成可移植配置。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "应重新导入订阅，而不是拷贝文件",
+      "paragraphs": [
+        "1. 在 Verge 新建配置，填写与 ClashX 相同的那条机场订阅（查询参数只保留 token=示例 这类片段，不另造地址），不要导入 ClashX 工作目录里的 yaml。\n2. 系统代理、TUN、DNS 覆写在 Verge 设置里重新选择。不要依赖 YAML 里 ClashX 写过的 enable、dns-hijack 字段。\n3. 需要改规则时，用可视化编辑或扩展配置，按 mihomo 的规则类型来写，例如 GEOSITE、GEOIP、RULE-SET，而不是把旧增强规则整段粘贴。\n4. 更新订阅后检查节点组和规则是否来自订阅原文。若还能看到 ClashX 特有字段或增强模式残留，说明仍在用本地拷贝。\n5. 连接失败时先看规则是否按从上到下匹配、目标 IP 规则是否误触发 DNS 解析（可按文档为 IP 类规则加 no-resolve）、UDP 是否被不支持 UDP 的节点打断，而不是再把旧 YAML 贴回去。",
+        "判断标准：配置来源是订阅更新而不是本地文件；端口、模式、TUN 开关以设置页为准；规则类型能在 mihomo 文档里找到对应项。满足这三点，才说明没有把 ClashX Pro 的成品配置当成 Verge Rev 的内核配置使用。",
+        "https://wiki.metacubex.one/en/config/rules/\nhttps://www.clashverge.dev/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

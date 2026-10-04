@@ -1,0 +1,57 @@
+{
+  "title": "Clash Verge Rev 电脑端：校园网下知网 IEEE 打不开，要不要改成系统 DNS",
+  "description": "Clash Verge Rev 电脑端：校园网下知网 IEEE 打不开，要不要改成系统 DNS。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-f88e8d7c5beb",
+  "category": "配置教程",
+  "tags": [
+    "Clash Verge Rev 知网 IEEE 必须直连",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "文献库打不开先分清授权还是解析",
+      "paragraphs": [
+        "校园网访问知网、IEEE 这类数据库，认的是学校出口 IP。域名一旦走了代理，或在 `fake-ip` 模式下拿到虚假地址，授权侧会判定你不在许可网段。表现常常是门户能开、检索或全文失败，或者登录页反复跳转。把整机改成「只用系统 DNS」并不能让学校承认身份；这些域名必须在校园网接口上解析，并且路由走 `DIRECT`。",
+        "判断可以对照三条。第一，关掉代理后文献库正常，打开代理或 TUN 后失败。第二，解析结果落在 `fake-ip-range` 里（文档默认示例为 `198.18.0.1/16`），而不是校园 DNS 给出的真实地址。第三，失败域名属于 `edu.cn` 或出版社文献域名，同时默认 `nameserver` 指向公共加密 DNS。满足其中两条，就应改解析路径和规则，而不是只切换系统 DNS 开关。",
+        "`enhanced-mode` 为 `fake-ip` 时，内核会给匹配到的域名下发虚假映射再去连接。文献库校验的是真实出口与真实地址，假 IP 会让后续连接和授权都偏离校园网。`redir-host` 不会下发这段假地址，但域名若仍走代理，授权照样失败。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "文献域名不要 fake-ip，也不要用公共 DoH",
+      "paragraphs": [
+        "在 DNS 配置把 `edu.cn` 和文献域名写入 `fake-ip-filter`，避免内核下发虚假映射。值支持域名通配，例如 `+.edu.cn` 以及实际使用的文献后缀。`fake-ip-filter-mode` 默认是 `blacklist`，表示匹配项不下发 fake-ip；不要误开成 `whitelist` 却只写了无关域名，否则文献域名反而会进假 IP。非必要不要改 `fake-ip-ttl`。",
+        "解析器要指到校园接口。`nameserver-policy` 优先于 `nameserver` 和 `fallback`，把 `+.edu.cn` 以及文献域名指到 `system` 或 `dhcp://system`。类型上，`system` / `system://` 使用系统 DNS，`dhcp://system` 使用系统 DHCP 下发的服务器。`direct-nameserver` 也可以设为 `system`，让直连出口的域名跟系统走；若希望直连域名同时遵守 `nameserver-policy`，再打开 `direct-nameserver-follow-policy`。",
+        "不要用公共 DoH、DoT 去解析这些域名。`nameserver`、`fallback` 里常见的加密公共服务器面向普通分流，文献库不适合走那条路径：解析结果即使能连通，源 IP 仍可能不是校园出口，授权仍会失败。`fallback` 与 `fallback-filter` 用于处理被污染的境外结果，不要把知网、IEEE 相关域名写进只走 `fallback` 的列表。`default-nameserver` 只用于解析 DNS 服务器自身的域名，不能替代文献域名的策略。",
+        "示例只保留直连文献这条路径所需的字段：",
+        "```yaml\ndns:\n  enable: true\n  enhanced-mode: fake-ip\n  fake-ip-filter:\n    - '+.edu.cn'\n  nameserver-policy:\n    '+.edu.cn': system\n  direct-nameserver:\n    - system\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "规则写成 DIRECT，再核对运行时 DNS",
+      "paragraphs": [
+        "DNS 指对之后，路由仍可能把请求送进代理组。在 `rules` 靠前位置为 `edu.cn` 和文献域名写 `DOMAIN-SUFFIX` 到 `DIRECT`。对已知校内网段可加 `IP-CIDR` 并带 `no-resolve`，避免为直连地址触发额外解析。不要依赖靠后的 `GEOIP` 来「顺便」覆盖数据库 CDN：部分文献域名并不落在你以为的国家库，或会先被更宽的代理集合命中。",
+        "`respect-rules` 会让 DNS 连接遵守路由规则，文献场景通常不需要把它和境外加密 DNS 绑在一起。改完后看运行时配置里的 `fake-ip-filter`、`nameserver-policy`、`direct-nameserver` 和靠前的 `DIRECT` 规则是否同时覆盖这些域名。验证时：代理开启，文献域名的解析应来自系统或 DHCP，TCP 应出校园网卡而不是代理节点。此时不必把整机所有域名都改成系统 DNS，只要这批域名走 `system` / `dhcp` 且规则为 `DIRECT`。",
+        "https://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/en/config/dns/type/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：进程规则只拦 TCP、UDP 仍直连",
+  "description": "Clash Verge Rev 电脑端（Windows）：进程规则只拦 TCP、UDP 仍直连。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-cae00c2ea5a1",
+  "category": "故障排查",
+  "tags": [
+    "Clash 进程规则 UDP 不生效",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash Verge Rev 在 Windows 上用进程规则时，连接面板经常出现同一 exe 的 TCP 已经命中 `PROCESS-NAME`，UDP 却仍按 IP 走直连。进程规则不是“这个程序的所有协议都包圆”。规则从上到下依次匹配，匹配到第一条符合条件的规则后停止。UDP 若没在足够靠前的位置被进程条件抓住，就会掉到后面的 IP、GEOIP 或 MATCH 上，看起来像进程规则失灵。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "进程行要放进前置规则顶部",
+      "paragraphs": [
+        "自定义规则建议写在前置规则里。前置规则优先级最高，能保证进程行先于订阅里的域名、IP 规则生效。后置规则在订阅规则之后才轮到，进程相关的 UDP 很容易先被 `GEOIP`、`IP-CIDR` 或最后的 `MATCH` 吃掉。",
+        "Windows 上按进程名匹配，例如：",
+        "```\n- PROCESS-NAME,Telegram.exe,📱 Telegram\n- PROCESS-NAME,steam.exe,🎮 游戏加速\n- PROCESS-NAME,WeChat.exe,DIRECT\n```",
+        "进程名要和系统里的可执行文件名一致。规则类型说明里，`PROCESS-NAME` 只描述进程名匹配，并没有写自动覆盖 TCP 与 UDP。因此不要指望一条进程规则必然管住两种协议。策略必须写成 DIRECT、REJECT，或配置里真实存在的分组名。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用 AND 把 UDP 单独钉死",
+      "paragraphs": [
+        "逻辑规则要求多条件同时满足。文档示例是：",
+        "```\n- AND,((DOMAIN-SUFFIX,youtube.com),(GEOIP,!CN)),代理策略\n```",
+        "同一套双层括号，可以把进程和协议绑在一起。若连接面板显示该 exe 的 TCP 已走进程规则、UDP 仍直连，在前置规则最上方增加专门针对 UDP 的行：",
+        "```\n- AND,((PROCESS-NAME,app.exe),(NETWORK,udp)),代理策略\n```",
+        "把 `app.exe` 换成实际进程名，策略换成你的代理组、DIRECT 或 REJECT。`OR` 是多条件满足其一，适合多个进程名共用一个策略，但解决不了“同一进程的 UDP 漏匹配”。",
+        "插入位置选前置规则。右键订阅配置文件，选择编辑规则；这里改的规则不会随订阅更新而失效。保存后只看新产生的 UDP 连接，不要用旧记录当结果。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用连接面板区分“没命中”和“被后面的 IP 抢走”",
+      "paragraphs": [
+        "判断依据放在连接面板，而不是只看网页能不能打开。同一 exe 同时看两条：TCP 的规则名是否为 `PROCESS-NAME` 或你写的 `AND`；UDP 的规则名是否变成 GEOIP、IP-CIDR 或 MATCH。若 UDP 落在 IP 类规则上，说明进程行要么不够靠前，要么没有把协议条件写进去。",
+        "注意规则顺序，避免前后矛盾。例如前面已经写了 `PROCESS-NAME,WeChat.exe,DIRECT`，后面又用 AND 把同一进程的 UDP 送进代理，后写的那条永远不会轮到。要把 UDP 钉死，就把带 `NETWORK` 的 AND 放在普通进程行之前，或只保留带协议条件的那一条。",
+        "MATCH 必须放在最后，作为兜底。测试对应程序的新连接时，确认前置规则里进程相关行仍在最前，再下结论。不要指望一条进程规则自动覆盖两种协议。",
+        "参考资料：\nhttps://www.clashverge.dev/guide/rules.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

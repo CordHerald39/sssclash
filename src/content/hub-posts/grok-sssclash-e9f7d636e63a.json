@@ -1,0 +1,66 @@
+{
+  "title": "Clash 电脑端（Linux）：把 Mihomo 装进 Docker 后 TUN 起不来要加哪些权限",
+  "description": "Clash 电脑端（Linux）：把 Mihomo 装进 Docker 后 TUN 起不来要加哪些权限。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e9f7d636e63a",
+  "category": "操作教程",
+  "tags": [
+    "Clash Linux Docker 部署 TUN NET_ADMIN",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "把 Mihomo 放进 Docker 后，TUN 起不来通常不是 `tun.enable: true` 写错，而是容器缺创建字符设备、改路由表的能力。顶层 TUN 负责接管系统流量、自动路由和 DNS 劫持；这些动作都要动内核对象，默认容器做不到。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "容器里 TUN 缺什么权限",
+      "paragraphs": [
+        "TUN 要打开 `/dev/net/tun` 并创建虚拟网卡（`device` 字段指定名称）。镜像里往往没有这个设备节点，也没有 `CAP_NET_ADMIN`。没有它们时，内核会拒绝 `ioctl` 建卡，Mihomo 日志里会报无法启用 TUN、无法打开 tun 设备一类错误，`ip link` 也看不到配置里的网卡名。",
+        "按下面补齐（名称、配置路径按实际替换）：",
+        "```bash\ndocker run --name mihomo \\\n  --cap-add NET_ADMIN \\\n  --device /dev/net/tun \\\n  --volume /path/to/config:/etc/mihomo \\\n  <镜像名>\n```",
+        "Compose 里对应 `cap_add: [NET_ADMIN]` 与 `devices: [/dev/net/tun:/dev/net/tun]`。`NET_ADMIN` 覆盖建 TUN、改地址、改路由、动 iptables/nftables；只加 `NET_RAW` 不够。不要用“把端口映射出来”代替这些权限：TUN 不是 `mixed-port` 那种应用入站，不靠 `ports:` 监听。",
+        "判断依据：",
+        "- 容器内 `ls -l /dev/net/tun` 不存在，或权限不足：先映射设备。\n- 设备在，但创建网卡返回 Operation not permitted：补 `NET_ADMIN`。\n- 网卡建好，`auto-route` 报无法写路由表、无法加 `ip rule`：同样是能力集问题，而不是 `stack` 选错。文档可用 `system` / `gvisor` / `mixed` / `mips`；防火墙拦截时 `system` 与 `mixed` 可能不可用，Linux 上可按文档对 TUN 网卡出站放行，例如 `iptables -A OUTPUT -o <TUN网卡名> -j ACCEPT`。",
+        "若启用 `auto-redirect`，还要改 iptables/nftables，仍依赖 `NET_ADMIN`，且文档要求 `auto-route` 已打开。这些都不是给容器加 `privileged` 才能描述的需求；`privileged` 只是更宽的替代，不是文档里的必要字段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "host 网络和 bridge 网络改的不是同一张路由表",
+      "paragraphs": [
+        "`auto-route` 会把全局流量导入 TUN 网卡。它调用的是**当前网络命名空间**里的 `iproute2`（表索引默认 2022，规则起始索引默认 9000）。",
+        "使用 `network_mode: host`（或 `--network host`）时，容器与宿主机共享协议栈：TUN 网卡出现在宿主机的 `ip link` 里，`auto-route` 改的是宿主机路由，本机其它进程才会被接管。这才是“Docker 里跑 Mihomo，却让宿主机走 TUN”的条件。",
+        "使用默认 bridge 时，容器有自己的网络命名空间。此时即使 TUN 启动成功，`auto-route` 也只改容器内部路由：只有容器里发出的包进 TUN，宿主机浏览器、其它容器、宿主机上的 Docker 网桥都不会被这张卡接管。把 `7890:7890` 映射出去只能给应用代理口用，不能让宿主机吃到容器里的 TUN。",
+        "判断依据：",
+        "- `ip link` 在**宿主机**能看到 TUN 网卡：当前是 host 网络（或等价的共享协议栈）。\n- 只有 `docker exec` 进容器才看得到该网卡：当前是 bridge/其它隔离网络，TUN 只管容器自己。\n- 宿主机 `ip route` 默认路由仍是物理网卡，容器内默认路由却指向 TUN：符合 bridge 预期，不是“TUN 没起”，而是起错了命名空间。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "启动顺序和不要混用的项",
+      "paragraphs": [
+        "1. 宿主机内核已加载 TUN：`ls /dev/net/tun`。没有则先在宿主机处理设备，再映射进容器。\n2. 先加 `NET_ADMIN` 与设备映射，再开 `tun.enable`。不要指望只加 `listeners` 里的 TUN 类型 Listener 来绕过权限；文档写明 Listener 中的 TUN 面向高级场景，普通接管应优先顶层 `tun`。\n3. 决定网络模式：要接管宿主机就用 host 网络，不要同时再配 `ports`、再给容器一张 bridge IP 指望双栈生效。只要容器内代理口，用 bridge 并映射 `mixed-port` / `socks-port` / `port`，同时把 `tun.enable` 关掉，避免误以为应用入站失败是 TUN 失败。\n4. `auto-detect-interface` 在容器里看到的“出口网卡”是容器视角。bridge 下它可能选中 `eth0`（veth），host 网络下才是宿主机物理网卡。多网卡时按文档用 `interface-name` 或 `include-interface` / `exclude-interface`（二者不能一起配）收窄范围。\n5. 需要 IPv6 时，顶层 `ipv6: true` 与 TUN 的 `inet6-address` 都要满足；文档说明启动时会检查系统是否已有 IPv6，容器里往往没有，不强制的话 v6 地址会被关掉。",
+        "权限和网络模式都正确后，再用 `auto-route`、`dns-hijack` 做系统接管。缺设备或能力时改 `stack`、`mtu`、`gso` 解决不了建卡失败。",
+        "https://wiki.metacubex.one/config/inbound/tun/\nhttps://wiki.metacubex.one/config/inbound/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：残留多块 Wintun 后 TUN 报 interface not found 怎么清",
+  "description": "Clash Verge Rev 电脑端（Windows）：残留多块 Wintun 后 TUN 报 interface not found 怎么清。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-50d0d5df28b9",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev Wintun 残留 检测不到网卡",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Windows 上反复开关 TUN 后，日志出现 interface not found，延迟测试全失败，切回系统代理却马上可用。这类情况优先查虚拟网卡残留，而不是订阅。Windows 常见问题写明：打开 TUN 后网络异常，系统里可能有多个网卡或网段与规则冲突，处理方向是打开网络设置、删除多余网卡。TUN 文档里的 `auto-detect-interface` 在多网卡场景建议改手动指定；探测拿到空名字时，出站会绑到不存在的接口。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "用系统代理对照，确认是空接口",
+      "paragraphs": [
+        "判断依据：",
+        "1. 同一份配置，系统代理能上网；TUN 一开，直连和代理一起报 interface not found。\n2. 适配器列表出现多块 Wintun Userspace Tunnel，名称带 `#2`、`#3`，部分已断开。\n3. 日志里自动检测得到空名字，随后为避免环回给出无效接口。",
+        "步骤：",
+        "1. 不要先换节点，也不要先更新订阅。系统代理对照成功，说明远端不是主因。\n2. 打开网络适配器，列出 Wintun、Meta Tunnel 等虚拟网卡，记下哪些处于已断开。\n3. 核对该 TUN 的 `device` 是否还在；自动检测是否指向已失效的那一块。",
+        "残留多块 Userspace Tunnel 时，探测结果经常是空字符串或失效隧道，内核仍按该结果绑定，于是 DIRECT 也失败。这和「某一个节点连不上」的日志形态不同：后者通常只打在单条出站上，前者会在直连和代理上同时出现接口错误。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "删除多余 Wintun，只留当前使用的一块",
+      "paragraphs": [
+        "1. 关闭 TUN 并退出客户端，确认内核进程结束，避免删除过程中又创建适配器。\n2. 在网络连接里删除多余的 Wintun Userspace Tunnel，只保留当前需要的一块；若配置写了 `device`，保留与该名称对应的那张。\n3. 不要在异常退出后连续快速开关 TUN。每次异常都可能留下新的 Userspace Tunnel。\n4. 再开 TUN，确认只多出预期的一块，日志里自动检测给出的是物理网卡名而不是空名。",
+        "官方把多个网卡列为 TUN 异常原因之一。清完仍失败，再写死出口名称，而不是继续换节点碰运气。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "关闭自动检测并写死物理网卡名",
+      "paragraphs": [
+        "多出口或虚拟网卡删不干净时，关掉自动选择，显式指定物理网卡。文档说明：`auto-detect-interface` 自动选择流量出口，多出口同时连接时建议手动指定。把 `interface-name` 写成以太网或 WLAN 在系统里的连接名称，不要写成 Wintun。",
+        "1. 在适配器列表抄下物理网卡连接名称，注意区分「已连接的物理口」和「已断开的隧道」。\n2. 设置 `auto-detect-interface` 为 false，填入该名称。\n3. `strict-route` 在 Windows 上会加防火墙规则抑制多宿主 DNS 泄漏，也可能影响部分虚拟机软件；它与「接口找不到」分开评估，不要为了清 Wintun 顺手打开。\n4. 重载后看日志是否还对随机目标探测 empty name。探测停止且出站绑在物理网卡上，路径才对。",
+        "`dns-hijack` 和 `auto-route` 只决定流量和 DNS 是否进 TUN，修不了错误的出口名。先把适配器列表清干净，再决定继续自动检测还是写死名称。",
+        "资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://www.clashverge.dev/faq/windows.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

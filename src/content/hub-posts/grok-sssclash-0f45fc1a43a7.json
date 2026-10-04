@@ -1,0 +1,55 @@
+{
+  "title": "Clash Meta 手机端（Android）：热点设备要填手机 IP 和哪个端口",
+  "description": "Clash Meta 手机端（Android）：热点设备要填手机 IP 和哪个端口。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-0f45fc1a43a7",
+  "category": "操作教程",
+  "tags": [
+    "Clash Meta 热点 允许局域网 端口",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "先判断是隧道没共享，还是端口没打开",
+      "paragraphs": [
+        "Clash Meta 在 Android 上启用 VPN/TUN 时，接管的是本机协议栈里的连接。Tun 文档对 Android 写了专门限制：auto-redirect 仅转发本地 IPv4 连接；要通过热点或中继共享 VPN 连接，请使用 VPNHotspot。连上你手机热点的电脑或另一部手机，默认不会进入同一条 TUN，也拿不到你的虚拟网卡和路由表。本机应用已经按规则出站，只能证明本机隧道存在，不能证明热点对端被接管。",
+        "可按场景核对：对端 WLAN 网关等于手机热点地址，而不是 TUN 地址；对端没有安装 VPN、也没有隧道接口；关闭手机上的 VPN 之后，对端仍能按普通热点方式访问网络。三者同时成立，就不要再改 include-package、include-android-user、auto-route。那些字段只决定本机哪些用户、哪些包进入隧道，不会给热点客户端下发代理。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "开启 allow-lan 后主机填热点 IP，端口填 mixed 或 HTTP",
+      "paragraphs": [
+        "全局配置里的 allow-lan 用于允许其他设备经过 Clash 的代理端口访问互联网，取值为 true 或 false。这是开放 HTTP、SOCKS 或 mixed 入站，和 VPN 隧道不是一种机制。透明共享做不到时，只能走这条路径，让对端在热点网里手工填写代理。",
+        "步骤如下：",
+        "1. 将 allow-lan 设为 true，保存后让内核加载新配置。\n2. 检查 bind-address。文档写明用星号绑定所有 IP，也可以绑定单个 IPv4 或单个 IPv6。热点场景下，绑定地址必须覆盖手机作为接入点时那张网卡的地址；绑成无关的单地址时，对端会连接拒绝或超时。\n3. 需要限制来源时设置 lan-allowed-ips，默认是 0.0.0.0/0 与 ::/0。lan-disallowed-ips 黑名单优先，误把热点网段写进去会直接拦掉客户端。\n4. 若配置了 authentication，对端必须携带用户名和密码。skip-auth-prefixes 默认是 127.0.0.1/8 与 ::1/128，热点里的设备不在环回段，不能按本机免密去套。\n5. 在同一份配置中找出 mixed 入站端口或 HTTP 入站端口，只使用当前文件里的数字，不要沿用其他设备上的端口。",
+        "对端填写规则：代理主机是手机在热点网段的 IPv4，且对端必须能访问该地址；代理端口是上一步的 mixed 或 HTTP 端口；协议与入站类型一致。不要填 127.0.0.1，不要填 Tun 示例里的 inet6-address。主机填错时多表现为超时或拒绝，端口或协议填错时多表现为握手失败。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "三项检查确认走的是代理端口",
+      "paragraphs": [
+        "第一，临时把 allow-lan 改为 false，对端访问该端口应失败；改回 true 且 IP、端口、协议都正确时，应能完成代理握手。这一步用来区分「根本没开放入站」和「IP 填成了环回地址」。第二，对端系统里只有 HTTP 或 SOCKS5 的主机与端口，没有安装 VPN 客户端，即可排除隧道接管。第三，本机即便保持 TUN 开启，热点设备仍然必须手填端口；两条路径可以同时存在，不能用本机已代理去推断对端已代理。",
+        "bind-address 若既不是星号也不是热点网关，应先改绑定再改端口。若目标是整网无感转发，文档指向 VPNHotspot，而不是继续堆 allow-lan 参数。allow-lan 解决的是「对端主动连代理端口」，TUN 解决的是「本机流量被系统送进隧道」，不要把二者写成同一种共享。",
+        "https://wiki.metacubex.one/config/general/\nhttps://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

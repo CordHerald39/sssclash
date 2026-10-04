@@ -1,0 +1,56 @@
+{
+  "title": "Clash 电脑端：米家报 dns resolve failed 要不要加 skip-domain",
+  "description": "Clash 电脑端：米家报 dns resolve failed 要不要加 skip-domain。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-a46372704dc5",
+  "category": "故障排查",
+  "tags": [
+    "Clash 米家 Mijia Cloud 连不上",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "米家电脑客户端连云时，日志经常先写嗅探成功，随后把访问目标改成带空格的字面量 Mijia Cloud，紧接着出现 dns resolve failed。这种失败容易被当成节点宕机或公共 DNS 故障，于是有人去换服务器、改订阅或清空规则。域名嗅探文档的示例里已经把该名称放进 skip-domain，说明内核把它当成“不能当域名用的 SNI”，而不是节点地址写错。处理顺序应是：确认覆盖发生在嗅探之后，再按示例跳过该主机名，而不是改 proxies。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先用三条日志把锅从节点上拿开",
+      "paragraphs": [
+        "打开电脑端实时日志，只盯米家发起的那一次出站。判断依据可以同时核对：入站是 TLS，目的端口落在嗅探端口里，常见为 443 或 8443；同一条记录写明从原 IP 或原域名得到主机名 Mijia Cloud；报错是对该字符串做 DNS 失败，而不是证书校验失败、连接重置或代理握手超时。若此时测延迟、打开普通网页都正常，就可以排除节点本身。文档写明 override-destination 表示是否使用嗅探结果作为实际访问，未写时按 true 理解。覆盖一旦生效，原来的目的 IP 被丢掉，后续只拿嗅探到的字符串去解析。Mijia Cloud 中间有空格，不是公网可解析域名，任何 nameserver 都会失败，于是出现 dns resolve failed。force-dns-mapping 只对 redir-host 识别的流量强制嗅探，parse-pure-ip 只对还没有域名的纯 IP 强制嗅探，二者都不会把非法主机名变成合法 A 记录，所以不要先去改 DNS 段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "对照示例写入 skip-domain，不要改节点字段",
+      "paragraphs": [
+        "官方示例在 sniffer 下列出 skip-domain: Mijia Cloud，语义是跳过嗅探，命中后不再用该 SNI 替换目标。建议按下面步骤改本地配置。第一步，确认 sniffer.enable 为 true，否则整段嗅探包括跳过列表都不会工作。第二步，不要改节点的 server、port、sni 或协议类型，也不要为了米家单独复制一条出站。第三步，在 sniffer 下新增或合并 skip-domain，原样写入文档中的字面量，保留大写和空格，不要改成无空格或带点的域名。第四步，若只处理米家 TLS，保持 sniff.TLS.ports 为文档示例中的 443 与 8443 即可，不必把 HTTP 的 80、8080-8880 一并放大。第五步，保存后重载配置，再触发米家登录或设备同步。skip-domain 使用域名通配，这里是精确字符串，和 force-domain 相反：后者会强制嗅探，前者会跳过。协议段里的 override-destination 可以覆盖全局，即使全局写成 false，TLS 段若仍为 true，仍可能改写目标，所以跳过列表比只改一个布尔值更稳。",
+        "```yaml\nsniffer:\n  enable: true\n  override-destination: true\n  sniff:\n    TLS:\n      ports: [443, 8443]\n  skip-domain:\n    - Mijia Cloud\n```"
+      ],
+      "links": []
+    },
+    {
+      "heading": "重载后怎样判断已经跳过嗅探",
+      "paragraphs": [
+        "再次打开米家，对照新旧日志。已经生效的依据是：不再出现把目的改写为 Mijia Cloud 的记录；内核不再对该字面量发起 DNS；连接继续使用原来的目的 IP，并按规则走直连或代理。如果失败形态变成握手超时或连接被重置，再去看规则是否把米家相关 IP 误送进代理，那是路由问题，不是嗅探覆盖。skip-src-address 与 skip-dst-address 只按地址段跳过，解决不了 SNI 字面量，不能拿来代替 skip-domain。也不要把 Mijia Cloud 写进 force-domain，那会反向强制嗅探，让失败复现。结论很明确：dns resolve failed 来自嗅探成功后把不可解析 SNI 当成访问目标，对照示例加入 skip-domain 即可，不必换节点。",
+        "https://wiki.metacubex.one/config/sniff/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

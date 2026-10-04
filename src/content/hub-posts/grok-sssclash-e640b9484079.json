@@ -1,0 +1,57 @@
+{
+  "title": "Clash 电脑端：ECH 站点过几分钟就打不开要先代理哪条域名",
+  "description": "Clash 电脑端：ECH 站点过几分钟就打不开要先代理哪条域名。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e640b9484079",
+  "category": "故障排查",
+  "tags": [
+    "Clash ECH 连不上 cloudflare-ech",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "部分站点开启 ECH 后，电脑端会出现前几分钟能打开、随后证书或握手异常、再刷新就失败的情况。出站 TLS 文档里，ech-opts.config 留空表示不在配置里写死参数，而改为通过 DNS 解析自动发现；只有填写了 base64 配置时才跳过发现过程。自动发现依赖 HTTPS 记录以及记录里指出的发现主机。若发现主机被直连拦截，客户端会先用缓存或首次偶然成功的参数连上，过期后再次查询失败，于是表现为“先通后断”。对走直连的 ECH 站点，应先保证发现域名能被可靠解析和连接，通常需要把它单独送进代理，而不是关闭整站 ECH 或改节点指纹。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先判断断的是发现过程还是站点本身",
+      "paragraphs": [
+        "在问题复现时对比两类流量。第一类是目标站点的 443 连接，SNI 仍是站点名；第二类是为 ECH 配置发起的 DNS 查询，以及随后对发现主机的访问。判断依据：故障前该站曾经成功；失败时间点和 DNS 缓存、HTTPS 记录 TTL 接近，而不是节点刚好掉线；把 ech-opts.enable 临时改为 false 后站点可以稳定打开，说明 TCP 和证书链本身可用。文档把 ech-opts.enable 定义为是否启用 Encrypted Client Hello；config 为空则通过 dns 解析，不为空则使用该值。query-server-name 可选项用于指定通过 dns 解析时的域名。因此“过几分钟打不开”更符合发现结果过期后无法刷新，而不是 Reality 或指纹突然失效。client-fingerprint、alpn、skip-cert-verify 影响的是站点握手，不会单独造成“仅发现阶段周期性失败”。若日志里能看到对发现主机名的查询被规则送到 REJECT 或国内不可达的 DNS，就可以把锅从节点 server 字段上拿开。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把发现域名单独走代理，config 继续留空",
+      "paragraphs": [
+        "不要一上来就填一段来历不明的 base64 到 ech-opts.config，那会绕过 DNS 发现，也难以随站点轮换更新。推荐步骤如下。第一步，在出站或全局需要 ECH 的地方保持 enable 为 true，config 留空，让内核继续走文档所述的 DNS 发现。第二步，若站点对外展现的 SNI 与查询名不同，再填写 query-server-name，使其指向实际要查询 HTTPS 记录的名字。第三步，在规则里把发现主机（常见为 cloudflare-ech.com 这类由 HTTPS 记录指出的名字）单独匹配到可用代理，确保查询和后续取配置都不会被直连拦截。第四步，检查 DNS 附加参数里不要误加 disable-qtype 一类丢弃 HTTPS 记录的选项，否则发现永远没有数据。第五步，重载后清掉过期的 ECH 缓存再访问站点，观察是否还能在数分钟后保持可连接。文档同时给出用 mihomo generate ech-keypair 生成自签名配置对的方法，那只适用于你自己控制的服务端；浏览公网站点时应继续留空 config，依赖 DNS，而不是把测试用 Config 填进浏览器出站。",
+        "```yaml\nproxies:\n  - name: \"tls-example\"\n    tls: true\n    sni: example.com\n    ech-opts:\n      enable: true\n      config:\n```",
+        "config 留空即自动发现；不要在正文里填写非来源列表的网址。规则侧用 DOMAIN 精确匹配发现主机，避免用过宽后缀把其它直连流量一并送进代理。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用“过期后再打开”当验收，而不是只看第一次成功",
+      "paragraphs": [
+        "改规则后不要只刷新一次。正确的判断方法是：第一次打开成功；等待超过此前失败的间隔再打开，仍能完成握手；DNS 日志里对发现主机的查询走了代理且有记录返回。若第一次成功、第二次仍失败，说明发现域名还在直连或仍被广告规则拦截。若关闭 enable 才稳定、打开 enable 立刻失败，则是 ECH 参数或对端不支持，和“过几分钟”不是同一类问题，不应再扩代理范围。fingerprint、name-cert-verify 只改证书校验，修不了发现失败。结论：config 留空时 ECH 依赖 DNS 发现；发现域名被拦就会让直连站点先通后断，应先给该发现名一条稳定代理，而不是改节点或写死配置。",
+        "https://wiki.metacubex.one/config/proxies/tls/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

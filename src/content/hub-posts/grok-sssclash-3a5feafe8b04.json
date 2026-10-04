@@ -1,0 +1,63 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：公司强制 PAC 把系统代理改回去，守卫要怎么开",
+  "description": "Clash Verge Rev 电脑端（Windows）：公司强制 PAC 把系统代理改回去，守卫要怎么开。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-3a5feafe8b04",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev 公司 PAC 系统代理守卫",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "公司电脑上组策略或 WPAD 会反复写入 AutoConfigURL。常见现象是 Clash Verge Rev 的系统代理已经打开，浏览器却仍执行公司 PAC：内网能开，按规则应分流的外网请求根本不进内核。根因是两套设置在抢同一组系统代理字段。项目把系统代理、守卫和 TUN 列为并列能力；关闭系统代理时应把 PAC 清掉。公司内网用官方 Bypass 或 PAC 脚本直连，不要和守卫对打同一套系统设置。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "分清开关状态和浏览器真正使用的脚本",
+      "paragraphs": [
+        "判断依据：",
+        "1. 系统代理页里仍开着自动检测或使用设置脚本，地址指向公司 WPAD/PAC，即使手动代理已填本地端口。\n2. 未开 TUN、只用系统代理时出现该现象。TUN 用路由重定向，不依赖应用是否遵守代理约定。\n3. 守卫关闭后，过一段时间 AutoConfigURL 被策略写回，浏览器重新走公司脚本。",
+        "步骤：",
+        "1. 先看是否同时存在脚本地址和本地监听端口。脚本地址还在，PAC 就仍可能优先于手动代理。\n2. 访问一条按规则应进代理的连接。若内核没有对应入站，说明浏览器没把流量交给 Clash。\n3. 节点延迟正常也不要先换节点，按 PAC 冲突处理。",
+        "系统代理是约定：应用自发去读注册表或系统变量。公司 PAC 走同一套约定。守卫负责把被改掉的项写回，但写回是否及时、关代理时 PAC 清不干净，决定能不能压过组策略。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "先开系统代理，再开守卫并缩短检查间隔",
+      "paragraphs": [
+        "1. 打开系统代理，确认 mixed-port 已监听，手动代理指向该端口。\n2. 再启用守卫，并设置检查间隔。间隔长于组策略刷新时，两次检查之间脚本会被写回。\n3. 关闭系统代理时必须清掉 PAC。相关修复见 pull/6591：禁用系统代理时完整清除 PAC，避免界面显示已关、自动配置脚本还在。若关代理后脚本栏仍有地址，应更新到包含该修复的版本，或先手动清空脚本地址，再观察守卫是否还能维持手动代理。\n4. 策略若持续写入，只靠手工改会和守卫来回覆盖。把检查间隔调到短于策略周期，并避免公司脚本与本地 PROXY 同时生效。浏览器遇到自动脚本时，通常不会再用你写的手动代理。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "内网走 Bypass 或 PAC 直连，和守卫分工",
+      "paragraphs": [
+        "公司门户、WPAD 主机、内网网段应直连。Bypass 文档分三条路：系统代理绕过、TUN 流量排除、自定义路由规则。",
+        "默认系统代理模式：在绕过列表写入网段，例如发往 `10.1.2.*` 的请求不走系统代理；环回和局域网一般也不走代理。把门户主机和 PAC 服务器一并绕过，避免认证请求打到本地端口再绕回来。",
+        "PAC 模式用脚本返回 DIRECT，其余交给本地端口做二次分流。把公司内网主机放进直连列表，其余再指向 mixed-port：",
+        "```javascript\nfunction FindProxyForURL(url, host) {\n  const directList = [\n    \"www.baidu.com\",\n    \"www.bilibili.com\",\n    \"10.11.12.13\",\n  ];\n  if (directList.includes(host)) {\n    return \"DIRECT\";\n  }\n  return \"PROXY 127.0.0.1:%mixed-port%; SOCKS5 127.0.0.1:%mixed-port%; DIRECT;\";\n}\n```",
+        "组策略过强、守卫只能间歇覆盖时，改用 TUN 做入站：重定向发生在请求发出之后，不依赖应用读系统代理。内网用 TUN 排除或规则直连。不要同时让守卫和公司 PAC 争同一套系统字段：选「系统代理 + 守卫 + Bypass/PAC」或「TUN + 路由排除」一条主路径。",
+        "资料：\nhttps://www.clashverge.dev/\nhttps://www.clashverge.dev/guide/bypass.html\nhttps://github.com/clash-verge-rev/clash-verge-rev/pull/6591"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Clash Mi 手机端（iOS）：一点连接就马上断开，是不是 geosite 太大",
+  "description": "Clash Mi 手机端（iOS）：一点连接就马上断开，是不是 geosite 太大。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-17d2aba5caed",
+  "category": "故障排查",
+  "tags": [
+    "Clash Mi iOS 自动断开",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "一点连接就断开，先区分语法错误和进程被杀",
+      "paragraphs": [
+        "Clash Mi 在 iOS 上「点击连接后立即自动断开」，官方把它和 Network Extension 的内存上限放在一起说明：iOS 对 VPN 扩展有严格内存限制（50M），一旦超出，系统会杀死 VPN 进程。这和节点超时、订阅过期、策略组选空不是同一类故障。文档给出的方向是减少 geosite、geoip、ip-asn 等规则数量，并改用 mrs 格式的规则集。",
+        "先看错误信息。若提示里带 yaml:line 这类字样，说明配置文本本身有问题，应订正（必要时重新更新订阅）后再连。若没有语法行号、一点即断、同一份偏大的规则在电脑上却能建立隧道，就按内存上限处理。不要用面板里的内存数字直接对比桌面：Clash Mi 的占用统计方式较实际偏低，且该说明主要针对 PC 端面板出现几百 M 的情况。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "桌面常用的 geosite 为什么会把扩展打死",
+      "paragraphs": [
+        "电脑端习惯挂整份 geosite、geoip，再叠加 ip-asn。这些库以庞大 YAML 规则集或等价数据加载时，VPN 扩展很容易超过约 50MB，于是进程被系统杀掉，界面上就是马上断开。iOS 还不支持 ips-asn 数据库，继续带着 ASN 规则只会增加无效负载。",
+        "mihomo 的 rule-providers 里，format 可选 yaml、text、mrs，默认 yaml。mrs 目前 behavior 仅支持 domain 与 ipcidr，可用 `mihomo convert-ruleset domain/ipcidr yaml/text XXX.yaml XXX.mrs` 转换。behavior 必须按文件真实格式填写，classical 与 mrs 不能混用。Clash Mi 场景下首先要减库、改格式，而不是继续把桌面全量 geosite 塞进手机。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "减库和改 mrs 的步骤、以及如何确认",
+      "paragraphs": [
+        "针对「怀疑 geosite 太大」可以按下面做：",
+        "1. 打开当前配置，统计 GEOSITE、GEOIP、IP-ASN，以及体积明显偏大的 RULE-SET。\n2. 删掉用不到的分类，例如用不上的地区库、全量广告库；iOS 上的 asn 相关项直接去掉。\n3. 必须保留的域名、IP 段规则集改成 mrs，type、behavior、format 写全；http 类型可设 interval，path 不要指向工作目录以外的随意位置。\n4. 更新订阅后重新连接。若仍秒断，继续减规则条数和规则集个数，而不是加节点或反复开关。\n5. 语法错误走「订正配置后重新连接」。华为鸿蒙「连接后无网络」是另一条说明，需要更新到 1.0.26.1201 或更高，不要和 iOS 秒断混在一个原因里。",
+        "验证时看三件事：断开是否发生在点击连接后瞬间；减小规则集之后进程是否还能存活；配置里是否还残留桌面全量 geosite/geoip/ip-asn。连接能保持后，推送通知、部分 App 走系统代理异常，属于 TUN 的 includeAllNetworks、附加 HTTP 代理等选项，不会表现为「一点连接就断开」，应另案处理。",
+        "https://clashmi.app/guide/faq\nhttps://wiki.metacubex.one/config/rule-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

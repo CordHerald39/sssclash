@@ -1,0 +1,56 @@
+{
+  "title": "Clash Meta 手机端（Android）：配置里写了 PROCESS-NAME 为什么没效果",
+  "description": "Clash Meta 手机端（Android）：配置里写了 PROCESS-NAME 为什么没效果。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-ee91662092d5",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta PROCESS-NAME 不生效",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "PROCESS-NAME 依赖进程匹配才会被看到",
+      "paragraphs": [
+        "全局配置用 find-process-mode 控制是否让 Clash 去匹配进程。always 表示开启并强制匹配所有进程；strict 是默认值，由 Clash 判断是否开启；off 表示不匹配进程，文档推荐在路由器上使用。PROCESS-NAME 这类规则需要内核拿到进程信息。模式为 off，或处于 strict 且判断为不开启时，规则不会命中，流量继续往下走，最后落到 MATCH。",
+        "判断依据：把同一段规则放到手机配置后，日志里没有进程名；或者把 find-process-mode 设为 off 前后出口完全一样。这两种情况都说明进程匹配没有参与分流，而不是节点失效，也不是策略组名称写错。先看全局这项，再改规则正文。"
+      ],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "手机端写了进程名仍可能整段被忽略",
+      "paragraphs": [
+        "Clash Meta 手机端面对的是 Android 按应用隔离的流量，配置里的进程名往往对不上桌面环境那种进程名，规则会被跳过。即便把 find-process-mode 改成 always，文档也只定义了匹配模式本身，没有承诺在 Android 上能为每个应用提供可写进规则的进程名。因此，手机上按进程名分流不应作为主路径。",
+        "建议步骤：",
+        "1. 阅读配置顶部的 find-process-mode。若为 off，先承认 PROCESS-NAME 无效。\n2. 若为 strict 或 always，打开日志确认连接有没有进程名字段。没有字段就不要保留这些规则。\n3. 注释全部 PROCESS-NAME 规则，只留 MATCH，对比出口是否变化。无变化即此前已被忽略。\n4. 需要按应用决定谁进代理时，使用客户端访问控制的允许名单或拒绝名单接管应用，而不是继续增加进程名条件。",
+        "典型场景：同一份 YAML 在电脑上能按进程名把终端走代理、浏览器直连，拷到手机后两个应用出口相同。这是匹配信息缺失，不要反向去改电脑上的 find-process-mode 来对齐手机。也不要把规则文件里已经写了理解成内核已经匹配了。规则引擎对未命中的项保持静默，只会继续下一条。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "落到 MATCH 时如何收口",
+      "paragraphs": [
+        "规则自上而下执行，PROCESS-NAME 未命中不会单独报错。最终 MATCH 承担所有漏网流量，容易造成规则存在但看起来像全局的错觉。若 MATCH 指向某个常用策略组，所有应用都会进该组，排查时会误以为进程名规则生效了只是节点不好。",
+        "收口方法：把 MATCH 临时指向一个单独策略组，只启动某一个应用。若所有应用都进入这个组，说明前面的进程名条件从未成立。再把 find-process-mode 在 always 与 off 之间切换一次并重载，若分流结果不变，即可关闭对进程名规则的依赖。路由器场景下文档建议使用 off，避免无意义的进程查询；手机场景同样应把进程匹配视为不可靠。",
+        "应用级路径以访问控制为准：要进隧道的应用留在允许逻辑里，要直连的应用放进拒绝名单。配置里的 PROCESS-NAME 可以删除，以免后续排查时再次被当成有效条件。MATCH 才是手机端这些规则被忽略后的真实出口，应把它写清楚，而不是在进程名上叠加更多条件。",
+        "https://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "title": "Clash 电脑端：Chrome 开了安全 DNS 后域名规则不命中怎么办",
+  "description": "Clash 电脑端：Chrome 开了安全 DNS 后域名规则不命中怎么办。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6bfd4f9e2dba",
+  "category": "故障排查",
+  "tags": [
+    "Clash Chrome 安全DNS 规则不生效",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Chrome 打开安全 DNS 之后，Clash 里按域名写的规则突然不命中，GEOSITE 像失效，只有 IP 类规则还在工作。原因是浏览器自己走 DoH 或 DoT，域名在浏览器进程内就解析成真实 IP，Clash 在连接上只能看到目标 IP。fake-ip 没有机会为这个域名分配虚假地址，GEOSITE、DOMAIN 只能退化为看 IP 再兜底。可以从关闭安全 DNS，或打开 TLS 嗅探两条路径处理，先用对照实验判断是哪一种流量形态，再改配置。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "安全 DNS 怎样让 fake-ip 失效",
+      "paragraphs": [
+        "DNS 配置里 enhanced-mode 可选 fake-ip 或 redir-host。fake-ip 会把匹配到的域名映射到 fake-ip-range 一段地址，后续连接带着这套虚假 IP 进入内核，内核再按原始域名做规则。浏览器启用安全 DNS 后，解析不再经过 Clash 的 DNS 监听，也不走系统 DNS。Clash 收不到该域名的查询，自然不会下发 fake-ip。连接直接打向真实 IP 时，DOMAIN、DOMAIN-SUFFIX、GEOSITE 没有域名可匹配。",
+        "判断依据：同一份配置，关闭浏览器安全 DNS 后域名规则恢复，开启后只剩 GEOIP 或 IP-CIDR 生效。日志里该请求以纯 IP 出现，而不是 fake-ip-range 里的地址。这与 nameserver 是否填写无关，因为查询根本没进 Clash DNS。fallback-filter 里的 geosite、nameserver-policy 只作用于 Clash 自己的 DNS 查询，浏览器侧加密 DNS 不会去读这些段。不要在未做对照前扩大 GEOSITE 或改 fake-ip-range，那解决不了浏览器侧解析绕过。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用 TLS 嗅探把域名找回来",
+      "paragraphs": [
+        "嗅探配置在 sniffer 段。enable 打开后，可对 HTTP、TLS、QUIC 按端口嗅探。TLS 默认端口包括 443 与 8443，从握手里的域名信息恢复访问名。parse-pure-ip 为真时，对所有未获得域名的流量强制嗅探，正好覆盖浏览器已经解析出真实 IP 的情况。force-dns-mapping 则针对 redir-host 识别出的流量强制嗅探。override-destination 决定是否用嗅探结果作为实际访问目标。",
+        "对照步骤如下。第一，先只关闭 Chrome 安全 DNS，不改 Clash 配置，看 GEOSITE 是否恢复；恢复则说明问题在浏览器侧解析。第二，若必须保留安全 DNS，则把 sniffer.enable 设为 true，为 TLS 指定 443 等端口，并根据需要打开 parse-pure-ip。第三，用 skip-domain、skip-src-address、skip-dst-address 排除内网或不需要嗅探的地址。第四，再打开同一站点，确认日志里出现嗅探得到的域名，且 GEOSITE 命中。判断依据：嗅探成功后，即便目标 IP 是真实地址，规则匹配用的是嗅探域名；嗅探未启用时，纯 IP 只能走 IP 规则。force-domain 可对指定域名强制嗅探，但安全 DNS 场景更关键的是 parse-pure-ip，因为一开始就没有域名。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "两条路径怎么选",
+      "paragraphs": [
+        "关闭安全 DNS 的路径最短，域名重新进入系统或 Clash DNS。若 DNS 的 enhanced-mode 是 fake-ip，即可重新为域名分配虚假 IP，GEOSITE 按域名工作。保留安全 DNS 时必须依赖嗅探，因为 fake-ip 链路已经被绕过。嗅探只支持 HTTP、TLS、QUIC，非这些协议的纯 IP 连接仍然没有域名，IP 规则兜底无法省略。respect-rules、proxy-server-nameserver 等只约束 Clash DNS 出站，改变不了浏览器自己的加密 DNS。",
+        "建议固定对照三种组合：安全 DNS 开、嗅探关，域名规则失败；安全 DNS 关、嗅探关，域名规则恢复；安全 DNS 开、嗅探开且 parse-pure-ip 开，依赖嗅探恢复域名。三种组合能把规则写错和根本没把域名交给 Clash 分开。先做关闭安全 DNS 的对照，再决定是否打开嗅探，避免同时改 DNS 模式、假 IP 段和嗅探开关，导致无法判断是哪一处生效。",
+        "参考资料：",
+        "https://wiki.metacubex.one/config/sniff/",
+        "https://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "title": "Clash 电脑端（WSL）：开了镜像网络，能不能直接用 127.0.0.1 走宿主代理",
+  "description": "Clash 电脑端（WSL）：开了镜像网络，能不能直接用 127.0.0.1 走宿主代理。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e96d81571dfb",
+  "category": "操作教程",
+  "tags": [
+    "Clash WSL2 镜像网络 127.0.0.1",
+    "操作教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "先分清 WSL 2 当前用的是 NAT 还是镜像网络，再决定发行版里的代理该写成 `127.0.0.1` 还是宿主网关。只在 Clash 里打开允许局域网，并不会把 Linux 回环改成 Windows 回环。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "NAT 下 127.0.0.1 只代表发行版",
+      "paragraphs": [
+        "WSL 2 默认是 NAT：发行版像一台带独立虚拟网卡的虚拟机。此时 Linux 里的 `127.0.0.1` 只指向发行版自己。宿主 Clash 即便监听在 Windows 的回环口，也不会出现在这台虚拟机的回环上。",
+        "要从发行版访问 Windows 上的代理，先查宿主在虚拟链路上的地址：",
+        "```bash\nip route show | grep -i default | awk '{ print $3}'\n```",
+        "输出类似 `172.30.96.1` 时，那才是默认路由下一跳，也就是宿主。Git、curl、容器守护进程的 `http_proxy` / `https_proxy` / `ALL_PROXY` 应写成“该地址 + Clash 的 HTTP 或 mixed 端口”，不要写 `127.0.0.1`。",
+        "从 Windows 反查发行版地址用 `wsl.exe hostname -I`（大写 `I`）。小写 `-i` 得到的是本机诊断地址，不能拿来做跨系统连接。",
+        "Clash 的允许局域网、绑定地址只决定代理端口是否接受其它来源。用对端 IP 连过来的请求会被当成局域网连接，服务需要绑在可被虚拟网卡访问的地址上（文档示例是绑到 `0.0.0.0` 而不是只绑 `127.0.0.1`）。这些开关都不能改变“发行版回环 ≠ 宿主回环”。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "镜像模式才会把回环对上宿主",
+      "paragraphs": [
+        "Windows 11 22H2 及以上，可在用户目录 `.wslconfig` 的 `[wsl2]` 写入 `networkingMode=mirrored`。该架构把 Windows 网卡镜像进 Linux。官方说明：镜像模式下，宿主与 WSL 2 可以用 `127.0.0.1` 互连，不必再查对端 IP。这才是“直接用 127.0.0.1 走宿主 Clash”的前提。",
+        "建议按下面做：",
+        "1. 确认 `.wslconfig` 已写 `networkingMode=mirrored`。\n2. 执行 `wsl --shutdown` 后再开发行版，避免仍跑在旧的 NAT 实例里。\n3. 在发行版访问 `127.0.0.1` 加宿主 Clash 端口；通了再改各工具的代理变量。\n4. 只用 IPv4 的 `127.0.0.1`。文档写明 IPv6 的 `::1` 在镜像模式不受支持。",
+        "关于“WSL 2 如何使用宿主网络代理”的问答，同样是建议改镜像模式，而不是在 NAT 下坚持写回环。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "场景判断：该写回环还是网关",
+      "paragraphs": [
+        "场景 A：配置里没有 mirrored，访问 `127.0.0.1:代理端口` 失败，访问默认路由网关却能对上 Clash。判定为 NAT。代理必须用网关 IP，并检查 Clash 是否允许局域网、是否只监听了 Windows 回环。",
+        "场景 B：已写 mirrored 并重启，`127.0.0.1` 可访问宿主端口，`::1` 失败。判定镜像已生效，保持 IPv4 即可。",
+        "场景 C：两种模式来回改过，部分终端通、新开发行版不通。先 `wsl --shutdown`，再用 `hostname -I` 与 `ip route` 是否仍是独立 `172.x` 网段做旁证。",
+        "场景 D：还要从局域网其它设备访问发行版内服务。NAT 下文档示例用 `netsh interface portproxy` 转发，`listenaddress=0.0.0.0`；镜像模式改善局域网直连，仍可能要按文档放行 Hyper-V 防火墙。这与“本机回环能否代表宿主代理”不是同一件事。",
+        "`autoProxy=true` 会让 WSL 跟随 Windows 的 HTTP 代理信息，它和 mirrored 是不同开关。未镜像时，即使自动带上了代理，目的地址仍应遵循 NAT 的宿主 IP，不能默认写成 `127.0.0.1`。",
+        "https://learn.microsoft.com/en-us/windows/wsl/networking\nhttps://learn.microsoft.com/en-us/answers/questions/2180344/wsl-2-how-to-use-the-hosts-network-proxy"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

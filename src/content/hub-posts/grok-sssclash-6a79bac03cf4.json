@@ -1,0 +1,57 @@
+{
+  "title": "Clash Verge Rev 电脑端：开 TUN 后 nas.local 变成 198.18，要不要加 fake-ip-filter",
+  "description": "Clash Verge Rev 电脑端：开 TUN 后 nas.local 变成 198.18，要不要加 fake-ip-filter。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6a79bac03cf4",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge nas.local 解析成 198.18",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "开 TUN 且 DNS 为 fake-ip 之后，`nas.local` 一类主机名经常变成 `198.18.x.x`。局域网发现依赖 mDNS 的 `.local` 后缀，操作系统和 NAS 客户端要的是链路上的真实地址，不是路由规则里的 `192.168.0.0/16`。合成地址一旦下发，SMB、管理页、发现协议都会连到不存在的主机。正确处理是在 `fake-ip-filter` 加入 `*.local` 与 `*.lan`，让这些名字返回真实解析；给 NAS 写一条 DOMAIN 代理或直连规则，改变不了已经发错的 A 记录。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": ".local 不是 192.168 网段规则能覆盖的",
+      "paragraphs": [
+        "`route-exclude-address` 可以排除 `192.168.0.0/16`，那只影响“目标已经是局域网 IP”的包。`nas.local` 在查询阶段若被 fake-ip 吃掉，应用拿到的是 `198.18.0.1/16` 里的地址，后续流量会当作远程主机送进 TUN，永远到不了 NAS。判断依据：关闭 fake-ip 或关闭 TUN 后主机名恢复；开启后 ping 到 `198.18`；资源管理器或发现列表能看见设备但无法打开。按 IP 直连 NAS 可能仍可用，说明二层网络没断，断的是名字。不要把问题写成“局域网规则没匹配 DOMAIN”。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "在 fake-ip-filter 放行本地域名",
+      "paragraphs": [
+        "`fake-ip-filter` 列出的地址不会下发 fake-ip 映射。默认示例已包含 `*.lan`；mDNS 场景还要加 `*.local`。`fake-ip-filter-mode` 保持 blacklist 时，命中即真实 IP：",
+        "```yaml\ndns:\n  enable: true\n  enhanced-mode: fake-ip\n  fake-ip-range: 198.18.0.1/16\n  use-system-hosts: true\n  fake-ip-filter-mode: blacklist\n  fake-ip-filter:\n    - '*.lan'\n    - '*.local'\n    - '+.arpa'\n```",
+        "步骤：确认 `enhanced-mode` 确为 fake-ip；把后缀写入 filter 后重载；再查 `nas.local`，A 记录应落在你的局域网网段。判断依据：结果不再位于 `198.18.0.0/16`；文件共享与管理页可用。若改成 whitelist，则只有名单内才 fake-ip，更容易误伤，局域网场景一般维持 blacklist。`use-system-hosts` 可让本机 hosts 里的 NAS 短名一并生效，但仍不能替代 `.local` 过滤。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "TUN 劫持与路由排除如何配合",
+      "paragraphs": [
+        "TUN 的 `dns-hijack` 会把 53 端口查询导入内部 DNS。Windows 与 macOS 无法自动劫持发往局域网的 DNS，mDNS（5353 以及组播）也不走普通 53。因此只开 `auto-route` 排除 `192.168.0.0/16` 不够，必须让内部 DNS 对 `.local` 返回真实结果。可选地把 `+.arpa` 放进 `nameserver-policy` 指向 `system`，便于 PTR 与内网反向查询。不要为 NAS 增加 DOMAIN 或 DOMAIN-SUFFIX 的代理规则：那只会在错误 IP 上再选一次出站。验收：filter 生效后主机名为局域网地址；TUN 仍可代理公网；排除网段避免局域网 IP 绕进虚拟网卡。若仍失败，检查是否把 `.local` 写进了 fallback 污染域名，或 `fake-ip-filter-mode` 被改成只对名单 fake-ip。名字先正确，路由排除才有意义。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

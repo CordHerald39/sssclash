@@ -1,0 +1,57 @@
+{
+  "title": "Clash 电脑端：没写 proxy-server-nameserver 时节点域名解析超时怎么查",
+  "description": "Clash 电脑端：没写 proxy-server-nameserver 时节点域名解析超时怎么查。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-6d633d03fedf",
+  "category": "故障排查",
+  "tags": [
+    "Clash 节点域名解析超时",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "电脑端能启动、规则也能匹配，但选中任何域名形式的节点就一直停在连接中，日志是节点主机名解析超时。DNS 文档写明：proxy-server-nameserver 专门用于解析代理节点的域名；如果不填，则遵循 nameserver-policy、nameserver 和 fallback 的配置。解析流程图则进一步说明，未命中 policy 且配置了 fallback 时，会用 nameserver 与 fallback 并发查询。于是出现一种隐蔽故障：两份列表里只要有一侧全是当前环境不能直连的加密 DNS，并发中的那一侧会拖到超时，节点域名一直没有可用 IP。补齐可直连的 proxy-server-nameserver 是针对节点解析的修法，不必把整份业务 DNS 改成明文。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "按文档区分“节点解析”和“浏览解析”",
+      "paragraphs": [
+        "先看配置里有没有独立的 proxy-server-nameserver。若没有，节点主机名与普通网站走同一套 nameserver / fallback 逻辑。判断依据：失败域名等于 proxies.server，而不是你正在访问的网站；default-nameserver 里已经是 IP，说明连 DoH 服务器本身都能解析，卡住的是“用这些 DoH 去问节点名”；把节点改成字面 IP 后可以连上，更说明只是名字解析失败。文档强调如需经过代理查询，应配置 proxy-server-nameserver，以防鸡蛋问题：节点还没解析出来，就无法用该节点去问 DoH。流程图里，并发查询之后还要经 fallback-filter 筛选。filter 只决定采用哪一侧的结果，并不保证两侧都能在超时前返回。nameserver 若全是国内可达、fallback 全是境外且当前不能直连，境外那一路会挂起；反之亦然。节点解析被绑在这条并发链上时，任意一侧整体不可达都会让你感觉“节点 DNS 超时”。proxy-server-nameserver-policy 仅当 proxy-server-nameserver 不为空时生效，只写 policy 不会单独生效。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "补可达的节点解析器，而不是删掉 fallback",
+      "paragraphs": [
+        "不要为了节点超时把 fallback 全部删掉，那会改变已经工作的网站分流。推荐步骤如下。第一步，在 dns.enable 为 true 的前提下，增加 proxy-server-nameserver，填入当前网络能直连的解析器。文档示例使用 IP 形式的默认解析器和加密服务器两种写法；对节点解析，优先选不依赖现有代理就能连上的地址，例如系统 DNS 或明文 IP 服务器，避免再走尚未连通的出站。第二步，若只有个别节点要走特定解析器，再写 proxy-server-nameserver-policy，键为节点主机名通配，值为本机可达的服务器。第三步，检查 nameserver 与 fallback 是否都是必须代理才能访问的加密 DNS；业务可以继续用它们，但节点解析必须从这条链上拆出来。第四步，respect-rules 为 true 时 DNS 连接也遵守路由，文档写明此时需要配置 proxy-server-nameserver，否则规则把查询送到还没起来的代理，鸡蛋问题会更明显。第五步，重载后只观察节点主机名是否在短时间内返回 A 记录，再做延迟测试。流程图还指出 direct-nameserver 用于直连出口域名的重新解析，且示例写明 direct-nameserver 重新解析仅限特定连接类型；它不负责 proxies.server，不要把系统 DNS 只写在 direct-nameserver 里却以为节点也能用。",
+        "```yaml\ndns:\n  enable: true\n  default-nameserver:\n    - 223.5.5.5\n  nameserver:\n    - 223.5.5.5\n  fallback:\n    - tls://8.8.4.4\n    - tls://1.1.1.1\n  proxy-server-nameserver:\n    - 223.5.5.5\n```",
+        "示例中的明文 IP 来自文档的 default-nameserver 写法，tls 前缀不是 http 网址。不要在节点解析器里填写必须先代理才能访问的查询地址。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用节点名是否在超时前返回 IP 做验收",
+      "paragraphs": [
+        "重载后选一个域名节点连接。修复成立的依据：日志里节点主机名由 proxy-server-nameserver 查出真实 IP；连接不再停在解析阶段；网站访问仍按原来的 nameserver 与 fallback 分流。若节点通了但国内站点变慢，说明误把业务 nameserver 也改成了境外，应改回去，只保留节点解析器的修改。若仍然超时，检查是否把加密 DNS 写进了 proxy-server-nameserver 却未提供直连路径，或 default-nameserver 写成了域名而不是 IP，导致连解析器本身都无法拨出。nameserver-policy 优先于 nameserver/fallback，但在未配置节点专用解析器时才会落到节点名上；配齐 proxy-server-nameserver 后，节点名不应再进入那套并发与 filter。结论：未写节点解析器时，节点域名走 nameserver 与 fallback 并发；任一侧整体不可达就会超时，应补当前环境可直连的 proxy-server-nameserver。",
+        "https://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/config/dns/diagram/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

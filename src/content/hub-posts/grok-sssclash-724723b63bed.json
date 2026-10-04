@@ -1,0 +1,57 @@
+{
+  "title": "Clash Verge Rev 电脑端：已经开了 Tailscale，再开 TUN 为什么互抢默认路由",
+  "description": "Clash Verge Rev 电脑端：已经开了 Tailscale，再开 TUN 为什么互抢默认路由。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-724723b63bed",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Tailscale 一起开",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Tailscale 与 Clash Verge Rev 的 TUN 都会创建虚拟网卡，并试图把默认路由指向自己。后启动的一方通常会抢走 `0.0.0.0/0`（以及对应的 IPv6 默认路由），于是出现“能上 Mesh 不能上网”或“能代理但 100.x 节点全断”。系统代理只改 WinINET 约定，并不参与抢路由，关掉它解决不了两张虚拟网卡争默认路由的问题。正确做法是把 Tailscale 地址块写入 `route-exclude-address`，并停掉 Tailscale 对 53 端口的劫持，让两套隧道各管各的网段。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "互抢默认路由时能看到什么",
+      "paragraphs": [
+        "TUN 在 `auto-route` 为 true 时会把全局流量指向虚拟网卡；`strict-route` 还会收紧规则，减少漏网。Tailscale 同样下发自己的接口和默认或更具体的路由。判断依据：路由表里短时间内出现两条指向不同接口的默认路由，后写入的生效；访问公网与访问 `100.x` 不能同时成功；断开其中一侧后另一侧立刻恢复。这与规则模式、节点是否可用无关，是入站层的路由所有权冲突。不要把现象理解成 DNS 规则写错就去关系统代理。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用 route-exclude-address 让出 Tailscale 网段",
+      "paragraphs": [
+        "`route-exclude-address` 在启用 `auto-route` 时排除自定义网段，使这些前缀不进 Clash 虚拟网卡。Tailscale 用户地址常用 CGNAT `100.64.0.0/10`，IPv6 常用 `fd7a:115c:a1e0::/48`。示例：",
+        "```yaml\ntun:\n  enable: true\n  stack: mixed\n  auto-route: true\n  auto-detect-interface: true\n  dns-hijack:\n    - any:53\n  route-exclude-address:\n    - 192.168.0.0/16\n    - 100.64.0.0/10\n    - fc00::/7\n    - fd7a:115c:a1e0::/48\n```",
+        "步骤：先固定启动顺序，记录哪一侧后启动会抢走默认路由；把上述前缀写入排除列表后重载 TUN；再看 `100.x` 是否仍从 Tailscale 接口出去，公网是否仍从 Clash 接口出去。判断依据：默认路由只由你期望的那一侧持有，Tailscale 前缀不再出现在 Clash 的全局路由里。局域网网段也可按同样方式排除，以免家庭或公司 RFC1918 被卷进隧道。不要用 `route-address` 只宣告少量网段来“代替排除”，除非你明确只要代理其中几段。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "关掉 Tailscale 的 DNS 劫持，而不是关系统代理",
+      "paragraphs": [
+        "TUN 的 `dns-hijack` 会把匹配的 53 端口查询送进内部 DNS 模块。Tailscale 若开启 MagicDNS 或覆盖本机 DNS，也会把查询指向自己的解析器。两边同时劫持时，出现节点名一个能解、一个变成 fake-ip 或空响应。应在 Tailscale 侧停止覆盖系统 DNS，让 Clash 的 `nameserver` / `nameserver-policy` 负责普通域名，Tailscale 主机名仅在其接口或 hosts 中解析。可把 `+.arpa` 以及需要真实内网结果的后缀放进 `nameserver-policy` 并指向 `system`。判断依据：`nslookup` 类查询不再随机指向两个 53 监听；Mesh 主机名能解到 `100.64.0.0/10` 内地址；普通域名不再误走 Tailscale 解析。系统代理开关只影响遵守约定的程序，改不了虚拟网卡路由，也不取消 53 端口争夺。先排除网段、再停止双重 DNS 劫持，两套隧道才能并存。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://wiki.metacubex.one/config/dns/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

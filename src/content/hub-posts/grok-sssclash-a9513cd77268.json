@@ -1,0 +1,69 @@
+{
+  "title": "Clash 电脑端（Linux）：git clone SSH 失败，http.proxy 为什么帮不上",
+  "description": "Clash 电脑端（Linux）：git clone SSH 失败，http.proxy 为什么帮不上。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-a9513cd77268",
+  "category": "故障排查",
+  "tags": [
+    "Clash Linux git ssh 22 代理失败",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "troubleshooting",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "`git config http.proxy` 只作用于 HTTP/HTTPS 远端。`git@github.com:` 这类地址走的是 SSH，默认连 22 端口，流量不会进入 Git 的 HTTP 代理设置。Linux 上 Clash/Mihomo 开着系统代理或规则模式，并不等于 SSH 已经进 mixed 口。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先确认失败的是哪一种远端",
+      "paragraphs": [
+        "在仓库目录执行：",
+        "```bash\ngit remote -v\n```",
+        "若远端是 `https://` 开头，`http.proxy` / `https.proxy` 才会被用到，代理应指向本机 `mixed-port` 或 `port`（HTTP 入站）。若远端是 `git@主机:命名空间/仓库.git`，握手在 SSH 客户端完成，Git 不会去读 `http.proxy`。",
+        "再看端口：SSH 默认 22。Mihomo 入站里，顶层 `port`、`socks-port`、`mixed-port` 接收的是应用主动连过来的 HTTP/SOCKS；`redir-port` / `tproxy-port` / TUN 才谈得上接管系统流量。没有把 SSH 送进这些入站时，节点侧或出口策略即使能代理 443，也不会自动带走 22。",
+        "判断依据：",
+        "- `https://` clone 成功、同仓库 SSH clone 失败：问题在 SSH 路径，不是 `http.proxy` 没写上。\n- 失败信息含 `Connection timed out`、`Connection refused` 且目标是 22：22 在当前出口上不可达的可能性大。\n- `nc -v 127.0.0.1 <mixed-port>` 能通，但 `ssh -v git@github.com` 仍停在 22：说明代理口正常，SSH 根本没走代理。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把 SSH 送进 mixed-port",
+      "paragraphs": [
+        "`mixed-port` 同时提供 HTTP 与 SOCKS，适合给 `ProxyCommand` 当本地入口。以本机已监听的 mixed 端口为准（文档 Listener 示例里出现过 `10808` 这类写法，实际以你的配置为准）。",
+        "在 `~/.ssh/config` 为该主机单独写：",
+        "```\nHost github.com\n  HostName github.com\n  User git\n  ProxyCommand nc -x 127.0.0.1:<mixed-port> -X 5 %h %p\n```",
+        "`-X 5` 表示 SOCKS5。若系统没有 `nc`，可用发行版提供的 `connect` 或 `ncat`，同样指向 mixed 或 `socks-port`。",
+        "注意全局配置里的鉴权：为 HTTP/SOCKS/mixed 配了 `authentication` 时，本机回环也要能过。`skip-auth-prefixes` 默认可放行 `127.0.0.1/8` 与 `::1/128`；若你改过这项，SSH 的 ProxyCommand 会被代理口拒绝，表现仍像“Git 连不上”，容易误判成节点问题。",
+        "`allow-lan` 只管其它设备能否用代理端口，对本机 SSH 无帮助。SSH 失败时先保证 `Host` 指向 `127.0.0.1` 上的入站，而不是去改 `http.proxy`。",
+        "连通检查：`ssh -vT git@github.com` 里应出现 ProxyCommand、对 `127.0.0.1` 的 SOCKS 握手，而不是直接 SYN 22。没有这些行，说明配置没被这个 Host 别名匹配到（例如远端写的是 IP 或其它 Host 名）。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "改走 443 上的 SSH 入口",
+      "paragraphs": [
+        "若不想让 SSH 经过 Clash，或当前节点对 22 直接丢弃，可以把 SSH 改到对方提供的 443 口（常见写法是主机名为 `ssh.github.com`、端口 `443`）。这是 SSH 协议换端口，不是 HTTP 代理。",
+        "```\nHost github.com\n  HostName ssh.github.com\n  User git\n  Port 443\n```",
+        "判断依据：明文 22 超时，但 `nc -v ssh.github.com 443` 能建立 TCP 时，优先用这条，而不是继续加 `http.proxy`。若 443 也要进代理，再把上一节的 `ProxyCommand` 叠上去，让 mixed 去连 `ssh.github.com:443`。",
+        "不要把 `http.proxy` 写成 SOCKS 地址还指望 SSH 使用——Git 只会把它用在 HTTP 智能协议上。需要系统级接管时，应改用 TUN/TProxy 等入站，并确认 22 的目标地址会进入该入站；那已超出 `http.proxy` 的职责。",
+        "https://wiki.metacubex.one/config/inbound/\nhttps://wiki.metacubex.one/config/general/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

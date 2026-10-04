@@ -1,0 +1,60 @@
+{
+  "title": "Clash Meta 手机端（Android）：升到新系统后一点启动就闪退怎么查",
+  "description": "Clash Meta 手机端（Android）：升到新系统后一点启动就闪退怎么查。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-1cbab824cfb4",
+  "category": "故障排查",
+  "tags": [
+    "Clash Meta Android 15 闪退",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "升到新系统后一点启动 Clash Meta 就闪退，优先按前台服务类型来查，而不是先改配置。Android 14 要求面向该版本的应用在清单里声明前台服务类型；若类型写成 specialUse，还必须同时声明权限 FOREGROUND_SERVICE_SPECIAL_USE。缺类型或缺权限时，系统会在 startForeground 抛出异常，并把服务从前景状态拿掉，表现就是刚点启动进程立刻消失。把「升级后闪退」和「配置写错但进程还在」分开，才能少走弯路。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "新系统对前台服务类型的硬性要求",
+      "paragraphs": [
+        "面向 Android 14 的应用必须为前台服务指定类型。可选类型包括 camera、connectedDevice、dataSync、location、mediaPlayback、specialUse 等。specialUse 用于无法归入其他类型的合法前台场景，是 Android 14 新增类型之一。清单里除了 `android:foregroundServiceType=\"specialUse\"`，还要有 `android.permission.FOREGROUND_SERVICE_SPECIAL_USE`。该权限属于 normal 权限，默认授予，用户不能在设置里撤销，但清单漏写就等于没有。",
+        "调用 startForeground 时如果未声明对应类型权限，系统抛出 SecurityException。如果目标版本已是 14 却完全没在清单里写类型，则抛出 MissingForegroundServiceTypeException。这两种异常都会阻止前台服务进入前景，正在运行的前台服务也可能被移出前景进程状态，进而导致应用崩溃。判断依据：闪退发生在点启动的瞬间，日志里能看到上述异常名，而不是配置解析失败。系统还会检查类型是否按预期使用；不满足运行时要求时同样在 startForeground 之后抛 SecurityException。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "对照清单逐项核对",
+      "paragraphs": [
+        "Clash Meta for Android 应用清单中已经声明 `android.permission.FOREGROUND_SERVICE` 以及 `android.permission.FOREGROUND_SERVICE_SPECIAL_USE`。LogcatService 的前台服务类型为 specialUse，并带有属性 `android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE`。另有 POST_NOTIFICATIONS，用于通知。自行编译或沿用旧包时，常见缺口是：只加了 specialUse 类型，却没有 FOREGROUND_SERVICE_SPECIAL_USE；或者类型与权限都有，但运行时 startForeground 没有带上对应类型。",
+        "文档建议使用 ServiceCompat.startForeground，传入类型常量；未在调用里指定时回退到清单值，清单也没有则同样抛 MissingForegroundServiceTypeException。排查步骤如下。第一，确认系统是否为 Android 14 及以上，以及闪退是否出现在升级后第一次启动。第二，过滤 SecurityException、MissingForegroundServiceTypeException、ForegroundServiceTypeNotAllowedException。第三，核对已安装包是否同时包含 specialUse 与 FOREGROUND_SERVICE_SPECIAL_USE。第四，若通知权限在 Android 13 及以上被拒绝，前台通知无法展示，应在日志中区分是类型权限异常还是通知失败。判断依据：官方清单路径下能看到该权限与 specialUse 同时存在；二者缺一，升级后一点启动就闪退的概率很高。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "运行时顺序与误判",
+      "paragraphs": [
+        "部分前台服务类型还要求先拿到运行时权限再 startForeground，顺序反了会 SecurityException。specialUse 的运行时前提没有额外定位或麦克风权限，但仍然必须先有 FOREGROUND_SERVICE 与 FOREGROUND_SERVICE_SPECIAL_USE 这两项清单权限。VPN 类应用另有 systemExempted 类型，仅当应用出现在系统 VPN 列表等条件时才允许；乱写该类型会 ForegroundServiceTypeNotAllowedException，与 specialUse 缺权限不是同一条错误，不要混在一次修改里。",
+        "升级后闪退的判断顺序建议固定为：先看是否已经按 Android 14 要求声明类型，再看 specialUse 是否搭配 FOREGROUND_SERVICE_SPECIAL_USE，最后才查配置、内核与通知。缺权限时系统在 startForeground 直接杀掉前景，这和连接失败但进程还在可以明确分开。日志没有这类异常时，再去查应用崩溃页或安装包是否损坏。不要在未看到类型或权限异常之前，把闪退全部归因于配置或节点。",
+        "参考资料：",
+        "https://developer.android.com/about/versions/14/changes/fgs-types-required",
+        "https://github.com/MetaCubeX/ClashMetaForAndroid/blob/main/app/src/main/AndroidManifest.xml"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "title": "Clash Verge Rev 电脑端：扩展配置里的 prepend-rules 为什么进不了 rules",
+  "description": "Clash Verge Rev 电脑端：扩展配置里的 prepend-rules 为什么进不了 rules。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-e66133959f4c",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge prepend-rules 不生效",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "在扩展配置 YAML 里写 `prepend-rules`，运行时配置多出这个字段、`rules` 却原样不动，是当前版本的预期行为，不是订阅没更新。自 v1.7.x 起，原来的 Merge 已改名为扩展配置，`prepend` / `append` 从这份 YAML 里拿掉了。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "扩展配置怎样处理列表",
+      "paragraphs": [
+        "扩展配置只改“写出来的字段”，没写的保持不变。对 `rules` 这种列表以及普通值，策略是**整表替换**，不是在原列表前插入。因此：",
+        "- 写出 `rules:` 并给出完整列表：最终 `rules` 变成这一份，订阅原文里的规则被换掉。\n- 写出 `prepend-rules:`：只是多了一个内核并不使用的键；真正参与匹配的仍是原来的 `rules`。\n- 既写 `prepend-rules` 又期望它自动拼进 `rules`：不会发生。文档把 prepend-rules 的能力移到了订阅右键菜单的可视化编辑器（编辑规则里的前置区）。",
+        "嵌套对象里，`tun`、`sniffer` 仍是逐项合并；`dns` 下写出的字段和顶层 `hosts` 从 v2.5.5 起也是整段替换。不要拿旧 Merge 模板里的 `prepend-rules`、`append-rules`、`prepend-proxies` 整段贴回扩展配置。",
+        "判断依据：打开运行时配置，若顶层同时存在 `rules` 与 `prepend-rules`，且前者与订阅一致、后者只出现在扩展文件中，即可认定扩展配置没有“前置规则”语义。内核按入站流量匹配的是 `rules`（以及规则集、子规则），不会读取 `prepend-rules` 这个名字。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "要追加规则时用编辑规则或扩展脚本",
+      "paragraphs": [
+        "需要在订阅规则前插入条目时，按自定义规则文档操作：",
+        "1. 右键订阅配置，选择「编辑规则」。这里改的规则不会随着订阅更新被覆盖。\n2. 把自定义项放到「前置规则」。规则从上到下匹配，前置区优先于订阅原文。\n3. 后置规则放在订阅规则之后、通常在 `MATCH` 一类兜底之前或之后，按你的策略需要选择；文档建议自定义优先走前置。",
+        "类型仍用内核认识的写法，例如 `DOMAIN`、`DOMAIN-SUFFIX`、`IP-CIDR`、`GEOIP`、`PROCESS-NAME`、`DST-PORT`、`MATCH`，策略为 `DIRECT`、`REJECT` 或已有代理组名。",
+        "若必须用文件管理列表，改走扩展脚本（对 `config` 做 JavaScript 修改），在数组层面操作 `config.rules`，而不是造一个内核不认识的键。脚本在扩展配置之后执行，适合把若干条插到数组头部。注意：设置页接管的字段（如 `mixed-port`、`mode`、`allow-lan`、`tun.enable` 以及 TUN 对话框里保存过的项）会在链路末尾写回，扩展里改这些会被丢弃；`rules` 不在该接管名单里，脚本改规则是有效路径。",
+        "执行顺序是：订阅原文 → 应用设置 → 全局扩展配置 → 全局扩展脚本 → 订阅扩展配置 → 订阅扩展脚本 → 应用设置回写。全局和订阅两份扩展配置会依次按“写出则替换列表”的规则叠加上去，所以不要在全局扩展配置里写半份 `rules` 还指望和订阅逐条合并。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "旧模板贴回去时怎么核对",
+      "paragraphs": [
+        "场景 A：从旧版 Merge 复制了 `prepend-rules`，Clash 能启动，策略匹配却像没写过自定义。先在运行时配置搜索该字段：能搜到说明 YAML 被原样合并进总表，但匹配仍看 `rules`。把内容挪到「编辑规则」前置区后，该字段应消失，`rules` 头部应出现同样条目。",
+        "场景 B：在扩展配置里写了完整 `rules`，想“只加两行”。结果订阅自带规则全部消失。这是列表整表替换，不是 bug。只加两行应使用前置区或脚本 `unshift`/`concat`。",
+        "场景 C：扩展脚本里改了 `config.rules`，界面提示某些字段被应用设置覆盖。对照文档中的接管列表：若提示的是端口、模式、TUN 开关，与规则无关；规则没变化时检查脚本是否 `return config`，以及是否改的是 `config.rules` 而不是 `config[\"prepend-rules\"]`。",
+        "场景 D：全局扩展配置和订阅扩展配置都写了 `rules`。最终只保留后执行的那一份整表。需要两份叠加时，把合并逻辑放到最后执行的订阅扩展脚本里。",
+        "核对完成后，用一条容易识别的 `DOMAIN-SUFFIX` 前置规则指向 `REJECT` 或某个专用组，看该域名是否在订阅规则之前命中。命中则前置通道正确；只有 `prepend-rules` 字段、匹配日志仍落到订阅中后段规则，就不要再把旧 Merge 当扩展配置用。",
+        "https://www.clashverge.dev/guide/extend.html\nhttps://www.clashverge.dev/guide/rules.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

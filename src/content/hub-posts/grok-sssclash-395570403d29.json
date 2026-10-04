@@ -1,0 +1,59 @@
+{
+  "title": "Clash Verge Rev 电脑端：开着代理知网万方打不开，要不要改 nameserver-policy",
+  "description": "Clash Verge Rev 电脑端：开着代理知网万方打不开，要不要改 nameserver-policy。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-395570403d29",
+  "category": "配置教程",
+  "tags": [
+    "Clash Verge 知网走代理打不开",
+    "配置教程",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "校园文献库（知网、万方以及同类全文库）普遍按校园出口公网地址做授权：只有从学校网关出去的请求，才会被识别为校内读者。Clash Verge Rev 开着代理后页面打不开，常见原因不是路由里少写了 GEOIP,CN，而是域名在 fake-ip 或公共解析器里已经被解成校外地址。授权发生在拿到真实 IP 并从校园网卡出站之后；只把“中国 IP 直连”写进规则，纠正不了错误的 A 记录。要把 `.edu` 与数据库域名放进 `nameserver-policy` 走系统 DNS，并在 `fake-ip-filter` 里跳过合成地址，才能拿到校内解析结果。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "为什么只写 GEOIP CN 不够",
+      "paragraphs": [
+        "GEOIP 规则作用在“已经解析出 IP”之后。文献库主机名一旦被映射到 `198.18.0.0/16`，或被公共 DNS 指到 CDN 公网节点，内核随后即便匹配中国地址并 DIRECT，源地址也可能已经不是校园出口。判断依据可以同时看这几件事：关闭代理能打开全文；开启后出现证书名不匹配、跳到统一认证失败或长时间无响应；同一域名查询结果变成 `198.18` 开头，或与学校网络中心公布的专线地址不一致。GEOSITE、GEOIP 只能决定流量从哪条出站走，不能把校园 DNS 本应给出的内网或专线地址“改回来”。把文献库当成普通国内网站处理，会在解析阶段就离开授权路径。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "把 edu 与数据库域名交给 nameserver-policy",
+      "paragraphs": [
+        "内部 DNS 启用后，`nameserver-policy` 优先于 `nameserver` 与 `fallback`。需要由校园解析器回答的后缀，应指向 `system` 或内网 DNS 的 IP，而不是境外加密解析。可按实际访问主机名增删：",
+        "```yaml\ndns:\n  enable: true\n  enhanced-mode: fake-ip\n  fake-ip-range: 198.18.0.1/16\n  use-system-hosts: true\n  default-nameserver:\n    - 223.5.5.5\n  nameserver-policy:\n    '+.arpa': system\n    '+.edu.cn': system\n    '+.cnki.net': system\n    '+.wanfangdata.com.cn': system\n  direct-nameserver:\n    - system\n  direct-nameserver-follow-policy: true\n```",
+        "建议步骤：从浏览器地址栏复制真实主机名，按后缀写入 policy；保存并重载内核；再查询 A 记录，确认回到校园相关地址。判断依据是 policy 已生效、结果不再落入 fake-ip 网段、也没有被 `fallback-filter` 的 domain 列表当成污染源。`direct-nameserver` 只服务 DIRECT 出口域名，可避免文献库查询漂到境外解析器。本校若还有独立数据库后缀，按同样方式追加，不要指望一条 GEOIP,CN 覆盖全部授权库。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "fake-ip-filter 与 TUN 劫持要一起改",
+      "paragraphs": [
+        "`enhanced-mode` 为 fake-ip 时，未过滤域名会下发合成地址。文献库客户端把 `198.18` 当作真实服务器去连，会话 Cookie 与 IP 授权都会失败。`fake-ip-filter-mode` 默认 blacklist，命中则返回真实 IP：",
+        "```yaml\ndns:\n  fake-ip-filter-mode: blacklist\n  fake-ip-filter:\n    - '*.lan'\n    - '*.local'\n    - '+.edu.cn'\n    - '+.cnki.net'\n    - '+.wanfangdata.com.cn'\n```",
+        "若同时开 TUN，`dns-hijack` 会把发往 53 端口的查询送进内部 DNS 模块。Windows 与 macOS 不能自动劫持发往局域网的 DNS，因此 policy 写成 `system` 或明确的校园 DNS IP 更稳妥。验收顺序：先确认故障仅在代理开启且访问文献库时出现；再临时把该域名改为 DIRECT，若仍失败即按解析问题处理；修改 policy 与 filter 后，A 记录不得落在 `198.18.0.0/16`；浏览器能打开全文，出口仍是校园地址。普通国内网站可以继续用 GEOIP 分流，授权库必须先拿到校内解析，再谈直连。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/dns/\nhttps://wiki.metacubex.one/config/inbound/tun/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

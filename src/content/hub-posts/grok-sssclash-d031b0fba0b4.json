@@ -1,0 +1,57 @@
+{
+  "title": "Clash Verge Rev 电脑端：开着网易 UU 再开 TUN，游戏连不上怎么办",
+  "description": "Clash Verge Rev 电脑端：开着网易 UU 再开 TUN，游戏连不上怎么办。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-d031b0fba0b4",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge UU加速器 TUN 冲突",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "网易 UU 一类游戏加速器会自己安装虚拟网卡、改写默认路由，和 Clash Verge Rev 的 TUN 是同一类入站手段。两边同时 `auto-route` 时，后启动的进程改同一张 `0.0.0.0/0`，游戏要么进错接口，要么握手成功后大包全丢。系统代理只是让程序自发把 TCP 发到本地端口，不创建第二张默认路由，也不携带 UDP。玩游戏时让 Verge 只保留系统代理，或把加速器相关进程写成 `PROCESS-NAME` 直连，不要把两条隧道叠在一起。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "双虚拟网卡如何把游戏流量撕开",
+      "paragraphs": [
+        "TUN 模式在程序发出请求之后，靠操作系统路由把 TCP/UDP 重定向进虚拟网卡，不依赖游戏是否支持代理。加速器同样劫持 UDP 与会话。判断依据：只开 UU 时游戏可进服；再开 Verge TUN 后匹配失败、排队后掉线或延迟图表中断；路由表默认网关在两个接口之间来回跳。这不是节点质量问题，也不是规则集过期。`strict-route` 还会进一步限制多宿主解析，加速器自检更容易失败。若游戏本身不读系统代理，开着 TUN 等于强制它走 Clash，和加速器的目的直接相反。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "玩游戏时只留系统代理",
+      "paragraphs": [
+        "系统代理把监听端口写到系统约定位置，遵守约定的浏览器、启动器可能走内核；游戏数据包（尤其是 UDP）通常不会跟过去。步骤：进入对局前关闭 TUN，保留或按需开启系统代理；确认加速器虚拟网卡仍是游戏流量的默认出口；打完再按日常需求决定是否恢复 TUN。判断依据：加速器面板显示已加速的进程名单恢复正常；系统路由里只剩加速器一侧的默认路由；浏览器若需要规则分流，仍可通过系统代理到达 mixed 入站。不要为了“全局接管”在对局中途切换 TUN 堆栈或重载 `auto-route`。服务模式只解决非管理员拉起 TUN 的权限，不会让两张虚拟网卡和平分享默认路由。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用 PROCESS-NAME 直连加速器，而不是叠隧道",
+      "paragraphs": [
+        "若希望桌面其他程序继续走 Clash，而加速器自己做 NAT，应在路由规则靠前位置把加速器进程指向 DIRECT，避免内核再拦它的出站。写法与其他规则一致，进程名以实际可执行文件为准：",
+        "```yaml\nrules:\n  - PROCESS-NAME,加速器主进程名,DIRECT\n  - PROCESS-NAME,加速器服务进程名,DIRECT\n```",
+        "同时不要给加速器网段再套一层 TUN 全局路由。步骤：列出加速器安装目录里常驻进程；写入 DIRECT 后重载；先启动加速器再启动游戏；Clash 仅处理浏览器等遵守系统代理的程序。判断依据：连接信息里这些进程显示 DIRECT；游戏 UDP 不再出现在 Clash 的 UDP 会话里；关闭 UU 后若仍要全局代理，再单独开 TUN，而不是两者同时 `auto-route`。排除接口、排除网段只能减少误伤局域网，阻止不了两个默认路由互相覆盖。原则是同一时刻只允许一层虚拟网卡改 `0.0.0.0/0`：要么加速器负责游戏，要么 Clash TUN 负责整机，不要叠两条隧道。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://www.clashverge.dev/guide/term.html"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

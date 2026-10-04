@@ -1,0 +1,64 @@
+{
+  "title": "Clash 电脑端：mrs 规则集能不能配 behavior: classical",
+  "description": "Clash 电脑端：mrs 规则集能不能配 behavior: classical。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-5ecd9b1e4724",
+  "category": "故障排查",
+  "tags": [
+    "Clash mrs classical",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "Clash 电脑端把规则集合写成 mrs 时，不少配置会顺手加上 `behavior: classical`。这套字段组合并不成立。mrs 用来存放压缩后的规则数据，当前只覆盖纯域名集合和纯 IP 集合；classical 对应的是带规则类型前缀的混合列表。把 classical 源直接标成 mrs，或给 mrs 写上 classical，轻则提供者无法加载，重则 `RULE-SET` 命中结果和源文件对不上。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先分清 format 和 behavior",
+      "paragraphs": [
+        "规则集合要同时核对两个字段，不能只改其中一个。`format` 可选 yaml、text、mrs，默认 yaml。`behavior` 可选 domain、ipcidr、classical，必须按文件真实格式填写，而不是按你希望它具备的能力填写。",
+        "domain 表示文件里每一行都是域名，没有 `DOMAIN-SUFFIX` 这类类型前缀。ipcidr 表示文件里每一行都是 IP 网段，同样没有类型前缀。classical 才允许 `DOMAIN-KEYWORD`、`PROCESS-NAME`、`IP-CIDR`、`DOMAIN-SUFFIX` 混在同一份列表里，载体只能是 yaml 或 text。",
+        "文档写明：mrs 目前 behavior 仅支持 domain / ipcidr。因此 mrs 只编码 domain 或 ipcidr 两种内容。`format: mrs` 配 `behavior: classical` 不在支持范围内。http、file、inline 三种 type 都可以声明规则集合，但 format 与 behavior 的约束不随 type 改变。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "带进程名或关键词的列表怎么改",
+      "paragraphs": [
+        "电脑端最常见的失败场景，是一份列表里同时出现域名关键词、进程名和 IP 段。这种文件必须保持 yaml 或 text，并把 `behavior` 设为 classical。不要为了统一成 mrs 而去改 format。",
+        "如果目标就是用 mrs 缩小体积，先把内容拆开：纯域名一份，纯 IP 一份。域名那份按 domain 转换，IP 那份按 ipcidr 转换。内核提供的命令形态如下：",
+        "```\nmihomo convert-ruleset domain yaml 域名列表.yaml 域名列表.mrs\nmihomo convert-ruleset ipcidr yaml IP列表.yaml IP列表.mrs\n```",
+        "源文件是 text 时，把命令里的 yaml 换成 text。完整形态是 `mihomo convert-ruleset domain/ipcidr yaml/text 源文件 目标.mrs`。转换完成后，rule-providers 里 `format` 写 mrs，`behavior` 必须与转换时选用的 domain 或 ipcidr 一致。",
+        "`path` 建议写清楚且全局不重复；省略时会用 url 的 MD5 作为文件名。type 为 http 才需要 url。path 默认只能落在 HomeDir（启动参数 `-d`）内，其它目录要靠环境变量 `SAFE_PATHS`，Windows 下用分号分隔。这些是落盘位置问题，不能拿来绕过 mrs 对 behavior 的限制。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "用文件内容当判断依据",
+      "paragraphs": [
+        "打开本地或缓存文件，按行判断。若能看到 `DOMAIN-KEYWORD,` 或 `PROCESS-NAME,` 这种类型前缀，它就是 classical 源：`format` 只能 yaml 或 text，`behavior` 必须 classical。若配置里同时出现 mrs 和 classical，直接改配置，不要指望内核自动降级。",
+        "若每一行只有域名、没有类型前缀，才是 domain；只有 CIDR、没有类型前缀，才是 ipcidr。只有这两类才允许转换成 mrs。转换前先确认拆分干净，不要把进程名行留在 domain 文件里。",
+        "加载后核对规则集合的条目类型是否与 behavior 一致。classical 集合应能被 `RULE-SET` 当成混合规则使用；mrs 集合不应再出现进程名或关键词类型。若提供者报错、条目数为零，或命中日志和源文件行数对不上，优先检查 format、behavior、转换命令三者是否指向同一类数据。",
+        "需要进程名或域名关键词时，留下 yaml/text 加 classical。只有纯域名或纯 IP 并且已经按对应类型转换成功时，才使用 mrs。不能把 classical 源直接标成 mrs。",
+        "参考资料：\nhttps://wiki.metacubex.one/config/rule-providers/\nhttps://wiki.metacubex.one/en/config/rule-providers/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

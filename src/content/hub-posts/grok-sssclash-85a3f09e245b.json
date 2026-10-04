@@ -1,0 +1,64 @@
+{
+  "title": "Clash Verge Rev 电脑端（Windows）：无线漫游后节点全红，日志 interface not found 怎么办",
+  "description": "Clash Verge Rev 电脑端（Windows）：无线漫游后节点全红，日志 interface not found 怎么办。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-85a3f09e245b",
+  "category": "故障排查",
+  "tags": [
+    "Clash Verge Rev WiFi 切换后没网",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "tutorial",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "无线在 AP 间漫游或 Wi-Fi 闪断后，节点测试会一起变红，页面打不开，退出 Clash Verge Rev 后系统网络立刻恢复。日志里大量 `[TUN] Auto detect interface` 后跟 `get empty name`，接着 `failed, return '<invalid>' to avoid lookback`，TCP 无论 DIRECT 还是代理都 `interface not found`。这不是节点集体挂掉，而是默认出口在空窗里丢了。现象与讨论见对应 issue。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "先退出客户端，确认物理无线已经恢复",
+      "paragraphs": [
+        "判断依据：",
+        "1. 闪断前节点可用，AP 切换或无线重启后同时变红。\n2. 退出客户端后网页恢复，说明线路和节点并未一起故障。\n3. 日志在同一秒对多个目标（含公共 DNS）探测都是空名字。",
+        "issue 中的复现是：连上无线、无线重启、多次往复。掉线瞬间 WLAN 驱动还在、没有 Carrier、接口仍是 Up、没有 DHCP 和 IP，默认路由和 DNS 被清空。内核仍要探测出口，重连被这次空窗打断；退出后 Windows 才能补全上线信息。",
+        "步骤：",
+        "1. 完全退出客户端，不要只关界面。\n2. 等任务栏无线重新关联 SSID，确认已拿到地址、默认路由已回到无线网卡。\n3. 物理网恢复后再打开客户端和 TUN，让自动检测重新抓网卡。\n4. 此时再测节点。日志已无 empty name 仍全红，才查订阅或防火墙。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "重开 TUN 让自动检测重新抓网卡",
+      "paragraphs": [
+        "`auto-detect-interface` 负责选流量出口。空窗里失败的结果会被当成当前接口，后续连接绑到 `<invalid>`，于是直连规则和代理规则一起失败。",
+        "1. 物理网卡已有 IP 和默认路由之后再开 TUN。\n2. 观察日志是否给出真实无线名称。给出名称说明检测已恢复。\n3. 无线仍显示未连接时不要连续点延迟，避免把失败接口写进更多会话。\n4. `auto-route` 只能把流量引进 TUN，出口名为空时救不了出站。",
+        "只连 Wi-Fi 的笔记本在漫游时空窗更明显；有线还在线的双网卡机器有时能躲过，因为探测仍可能落到那条稳定出口上。不要把这种差异理解成「无线订阅坏了、有线订阅好了」。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "经常漫游就写死 WLAN 的 interface-name",
+      "paragraphs": [
+        "AP 频繁切换时，不要每次空窗都赌自动探测。文档建议多出口设备手动指定出口。issue 讨论的缓解方向是关闭自动检测，把出入接口和无线网卡绑定。",
+        "1. 记下无线网卡连接名称，常见为 `WLAN`，以本机显示为准。\n2. 将 `tun.auto-detect-interface` 设为 false，并设置 `interface-name` 为该名称。讨论中的配置还会关闭 route 自动检测、把 `route.interface` 写成同一块网卡，目的是避免再探测到空名。\n3. 重载后故意断开再连接 Wi-Fi，检查是否还刷 empty name。\n4. 不要先换节点。若写成以太网而当前只有 Wi-Fi，会变成另一种 interface not found。",
+        "```yaml\ntun:\n  enable: true\n  auto-route: true\n  auto-detect-interface: false\n  dns-hijack:\n    - any:53\ninterface-name: \"WLAN\"\n```",
+        "`strict-route` 与 `dns-hijack` 处理泄漏和 DNS 导入，不填补漫游空窗。顺序是：退出验证物理网，重开 TUN；要少踩空窗就写死无线名称。",
+        "资料：\nhttps://wiki.metacubex.one/config/inbound/tun/\nhttps://github.com/clash-verge-rev/clash-verge-rev/issues/7197"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Clash 电脑端：TCP 命中域名规则，UDP 却走 DIRECT",
+  "description": "Clash 电脑端：TCP 命中域名规则，UDP 却走 DIRECT。了解适用条件、操作步骤与常见问题的排查方法。",
+  "slug": "grok-sssclash-1a8e4293ae4a",
+  "category": "故障排查",
+  "tags": [
+    "Clash UDP doesn't match any rule",
+    "故障排查",
+    "Clash"
+  ],
+  "publishedAt": "2026-10-04",
+  "updatedAt": "2026-10-04",
+  "cover": "routing",
+  "software": [],
+  "airports": [],
+  "sections": [
+    {
+      "heading": "电脑端连接日志里，TCP 已经命中域名规则并进入代理组，同一目标的 UDP 却显示走 DIRECT。这不一定是域名没写上。Mihomo 对 UDP 有额外门槛：请求命中代理组之后，若当前节点没有启用 UDP，这次命中会被放弃，匹配继续往下走。后面如果只剩下 IP 规则或最终的 MATCH，日志就会变成 doesn't match any rule using DIRECT，或直接落到直连。只看 TCP 记录会误判成分流已经成功。",
+      "paragraphs": [],
+      "links": [
+        {
+          "text": "软件下载与使用指南",
+          "href": "/software/"
+        }
+      ]
+    },
+    {
+      "heading": "域名规则命中之后，UDP 仍可能继续往下",
+      "paragraphs": [
+        "路由规则从上到下匹配，写在上面的优先。`DOMAIN`、`DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`GEOSITE` 等域名规则本身不区分 TCP 和 UDP，两种协议都可以命中同一行。",
+        "文档补充了一条关键行为：如果请求是 UDP，而代理节点不支持 UDP（例如 ss 节点没有指定 `udp: true`），内核会继续向下匹配。也就是说，域名行对 TCP 生效，不等于对 UDP 生效。UDP 被丢弃后，常见情况是域名规则已经用过，剩下 `GEOIP`、`IP-CIDR` 或 `MATCH`。MATCH 若指向 DIRECT，观感就是“域名规则只管 TCP”。",
+        "因此排障时必须把“规则是否写到”和“节点是否接受 UDP”分成两件事。只改规则、不看节点，UDP 仍会在命中后被丢掉。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "给节点开 UDP，或单独写协议条件",
+      "paragraphs": [
+        "若希望该域名的 UDP 也走同一代理组，到实际会被选中的出站上打开 UDP 支持，即写上 `udp: true`。代理组名称能被命中，只说明策略选对了；组里当前节点没有 UDP，内核仍会放弃这一次命中。",
+        "若只想单独控制 UDP 走向，不要依赖只写了域名的那一行。使用 `NETWORK` 匹配 tcp 或 udp：",
+        "```\n- NETWORK,udp,DIRECT\n```",
+        "需要“这个域名的 UDP 直连、其它协议仍代理”时，用逻辑规则，注意双层括号：",
+        "```\n- AND,((DOMAIN,baidu.com),(NETWORK,UDP)),DIRECT\n```",
+        "`OR`、`NOT` 同样要求括号成对。括号少一层时，整行往往不会按预期工作，表现也像 UDP 没被管住。需要先按协议筛一遍再走子表时，可以用 `SUB-RULE,(NETWORK,udp),某子表`，避免和 TCP 规则缠在一起。",
+        "IP 类规则在域名匹配阶段可能触发 DNS 解析。若不希望解析，可在目标 IP 规则上加 `no-resolve`。这只影响解析时机，不能代替节点上的 UDP 开关。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "对照同一目标的两条连接再下结论",
+      "paragraphs": [
+        "判断依据放在同一目标的 TCP 与 UDP 两条记录上。TCP 命中 `DOMAIN-SUFFIX` 而 UDP 显示 DIRECT，或提示没有匹配到规则，优先查当时选中的节点有没有 `udp: true`，而不是先改域名列表。",
+        "建议步骤：记下代理组最终选出的节点；确认节点字段里有 UDP；看域名规则之后有没有 `MATCH,DIRECT` 把漏网 UDP 收走；需要时在域名规则之前插入带 `NETWORK,udp` 的行，避免它落到 IP 规则。逻辑规则命中后，若节点仍不支持 UDP，匹配照样继续，所以改规则和改节点要一起核对。",
+        "结论：TCP 命中不能代表分流完成。给节点开 UDP，或单独写 `NETWORK` 与 `AND` 组合，才能把 UDP 钉在指定策略上。不要只看 TCP 日志当分流成功。",
+        "参考资料：\nhttps://wiki.metacubex.one/en/config/rules/"
+      ],
+      "links": [
+        {
+          "text": "更多 Clash 教程",
+          "href": "/articles/"
+        }
+      ]
+    }
+  ]
+}
