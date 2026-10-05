@@ -9,7 +9,7 @@
     "Clash"
   ],
   "publishedAt": "2026-10-04",
-  "updatedAt": "2026-10-04",
+  "updatedAt": "2026-10-05",
   "cover": "troubleshooting",
   "software": [],
   "airports": [],
@@ -64,6 +64,44 @@
           "href": "/articles/"
         }
       ]
+    },
+    {
+      "heading": "补充适用范围与官方依据",
+      "paragraphs": [
+        "在 Linux 上已能通过 Clash 访问网络，但 `git clone` 走 SSH 连接 GitHub 时 22 端口超时或失败，并且给 Git 配了 `http.proxy` 仍无改善时，适用先做官方 443 端口探测、再核对主机名与主机密钥的补充排查。处理方向不是重建密钥，也不是让 HTTP 代理去承载 SSH：`http.proxy` 只作用于 HTTP/HTTPS 协议的克隆与推送，SSH 仍是独立通道。防火墙可能完全拒绝 SSH，官方允许尝试经 HTTPS 端口建立 SSH；多数防火墙规则应允许，但代理服务器可能干扰。先用官方 `ssh -T -p 443` 区分「端口不通」和「已经连通但密钥未授权」。GitHub Enterprise Server 以及带数据驻留的 Enterprise Cloud 目前不支持该方式。说明以 Using SSH over the HTTPS port 为准。Clash 侧 HTTP 代理、ProxyCommand 以及把连接固定到 443 的写法请沿用原有正文与入口，本文不重写。"
+      ],
+      "links": [
+        {
+          "text": "Using SSH over the HTTPS port",
+          "href": "https://docs.github.com/en/authentication/troubleshooting-ssh/using-ssh-over-the-https-port"
+        }
+      ]
+    },
+    {
+      "heading": "用官方命令区分连通性与密钥授权",
+      "paragraphs": [
+        "不要先删除或重新生成密钥。探测命令为：`ssh -T -p 443 git@ssh.github.com`。若成功，会出现类似 `Hi USERNAME! You've successfully authenticated, but GitHub does not provide shell access.` 的说明，表示 443 上的 SSH 已通，且当前密钥已被接受；GitHub 不提供 shell。若命令卡住、超时或连接被拒，问题在连通性、防火墙或中间代理，继续改 `http.proxy` 帮不上。若已能连上但出现公钥未授权一类提示，则应回到账号中的 SSH 公钥是否与本机匹配，而不是换端口。",
+        "探测不要配合跳过主机密钥验证。材料写明代理服务器可能干扰这条路径，Clash 作为本地代理时，SSH 也不会自动继承 Git 的 HTTP 代理设置。探测成功后，可用 `git clone ssh://git@ssh.github.com:443/YOUR-USERNAME/YOUR-REPOSITORY.git`，将用户名与仓库名换成实际路径。本文不展开把全部 `github.com` 流量改写到 443 的配置段；探测通过后再使用原有入口。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "ssh.github.com 与 github.com 以及 known_hosts",
+      "paragraphs": [
+        "端口 443 的主机名是 `ssh.github.com`，不是 `github.com`。对 `github.com` 直接测 443、或把两个名字当成同一入口，会连错主机。探测必须写 `git@ssh.github.com` 并带 `-p 443`。",
+        "切换到 443 后第一次交互，可能提示主机未出现在 `known_hosts`，或已由另一名字记录。文档示例警告针对 `[ssh.github.com]:443`，其中给出 ED25519 指纹 `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU`，并可能显示该密钥已在 `known_hosts` 里对应 `github.com`。官方写明：仅当指纹与 GitHub 已公布指纹相符时，回答 yes 才是安全的。不要关闭校验，不要把任意主机都设为自动接受，也不要使用未出现在该文档中的指纹；示例这一条不能代替你必须对照的官方公布列表。",
+        "`known_hosts` 按名字与端口区分。默认 22 上的 `github.com` 与 `[ssh.github.com]:443` 可以同时存在。不要为消除警告而清空整个文件。若提示密钥与已保存记录冲突，应停止连接并对照官方指纹。若已能经 443 连上 `git@ssh.github.com`，官方允许再把对 `github.com` 的连接指到该服务器和端口，并用 `ssh -T git@github.com` 验证；具体改写以原有正文与官方文档为准。"
+      ],
+      "links": []
+    },
+    {
+      "heading": "企业版限制与仍不通时的 HTTPS 替代",
+      "paragraphs": [
+        "GitHub Enterprise Server 目前不支持经 HTTPS 端口访问 SSH。GitHub Enterprise Cloud with data residency 同样目前不支持。这两类环境不要套用 `ssh.github.com` 的 443 结论，应按所在企业提供的主机与端口处理。",
+        "若 `ssh -T -p 443` 仍失败，可能是代理干扰、策略拦截，或目标根本不是 github.com 公共站点。不要为打通而跳过主机密钥验证。本文不保证 443 在所有网络可用。合法替代是改用 HTTPS 克隆，并在可以使用凭据缓存的前提下用 HTTPS 访问；官方正是在「HTTPS 克隆加凭据缓存不可行」时才建议尝试 SSH over HTTPS 端口。HTTPS 使用 `https` 远程地址与账号凭据或 token，与 SSH 密钥不是同一条通道。",
+        "常见失败：对 `github.com` 而不是 `ssh.github.com` 测 443；把「已认证但不提供 shell」当成失败；指望 `http.proxy` 代理 SSH；指纹未核对就选 yes；在 Enterprise 环境套用该端口。替代顺序是：官方 443 探测区分连通与授权，核对指纹后再写入 `known_hosts`，探测成功则沿用原有 443 配置入口，仍不通则改 HTTPS 克隆。仅为换端口不必重建密钥。"
+      ],
+      "links": []
     }
   ]
 }
