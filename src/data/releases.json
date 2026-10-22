@@ -20,14 +20,14 @@
     "publishedAt": "2026-10-17T10:24:48Z"
   },
   "clash-meta-android": {
-    "version": "v2.11.35",
-    "url": "https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/v2.11.35",
-    "publishedAt": "2026-09-30T16:59:35Z"
+    "version": "v2.11.36",
+    "url": "https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/v2.11.36",
+    "publishedAt": "2026-10-21T16:44:10Z"
   },
   "clashx-meta": {
-    "version": "v1.4.46",
-    "url": "https://github.com/MetaCubeX/ClashX.Meta/releases/tag/v1.4.46",
-    "publishedAt": "2026-10-01T12:04:52Z"
+    "version": "v1.4.47",
+    "url": "https://github.com/MetaCubeX/ClashX.Meta/releases/tag/v1.4.47",
+    "publishedAt": "2026-10-21T19:00:59Z"
   },
   "pandora-box": {
     "version": "v1.0.24",
@@ -35,8 +35,8 @@
     "publishedAt": "2026-10-16T12:45:28Z"
   },
   "mihomo": {
-    "version": "v1.19.32",
-    "url": "https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.32",
-    "publishedAt": "2026-09-30T17:09:36Z"
+    "version": "v1.19.33",
+    "url": "https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.33",
+    "publishedAt": "2026-10-21T16:56:13Z"
   }
 }
